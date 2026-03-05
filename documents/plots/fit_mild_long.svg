@@ -262,14 +262,14 @@ Log-moneyness k
 <circle cx="561" cy="304" r="3" opacity="1" fill="#0000FF" stroke="none" stroke-width="1"/>
 <circle cx="589" cy="302" r="3" opacity="1" fill="#0000FF" stroke="none" stroke-width="1"/>
 <polyline fill="none" opacity="1" stroke="#FF0000" stroke-width="2" points="60,85 87,104 115,124 143,144 171,163 199,183 227,202 254,220 282,238 310,255 338,271 366,285 394,297 421,307 449,314 477,318 505,319 533,317 561,313 589,306 "/>
-<rect x="500" y="37" width="85" height="44" opacity="0.8" fill="#FFFFFF" stroke="none"/>
-<rect x="500" y="37" width="85" height="44" opacity="1" fill="none" stroke="#000000"/>
-<text x="540" y="47" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="9.67741935483871" opacity="1" fill="#000000">
+<rect x="502" y="37" width="83" height="44" opacity="0.8" fill="#FFFFFF" stroke="none"/>
+<rect x="502" y="37" width="83" height="44" opacity="1" fill="none" stroke="#000000"/>
+<text x="542" y="47" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="9.67741935483871" opacity="1" fill="#000000">
 Market
 </text>
-<text x="540" y="62" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="9.67741935483871" opacity="1" fill="#000000">
+<text x="542" y="62" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="9.67741935483871" opacity="1" fill="#000000">
 SSVI Fit
 </text>
-<circle cx="520" cy="51" r="3" opacity="1" fill="#0000FF" stroke="none" stroke-width="1"/>
-<polyline fill="none" opacity="1" stroke="#FF0000" stroke-width="2" points="510,66 530,66 "/>
+<circle cx="522" cy="51" r="3" opacity="1" fill="#0000FF" stroke="none" stroke-width="1"/>
+<polyline fill="none" opacity="1" stroke="#FF0000" stroke-width="2" points="512,66 532,66 "/>
 </svg>
