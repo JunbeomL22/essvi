@@ -1,0 +1,14 @@
+[package]
+name = "essvi"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+plotters = "0.3"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "calibration"
+harness = false
