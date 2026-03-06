@@ -1,7 +1,7 @@
 <svg width="640" height="420" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg">
 <rect x="0" y="0" width="640" height="420" opacity="1" fill="#FFFFFF" stroke="none"/>
 <text x="320" y="15" dy="0.76em" text-anchor="middle" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
-T=0.1936, (SSVI) average price error in bps of the Forward: 10.237
+T=0.1936 (surface fit) avg price err: 10.2 bps, cal viol: 0
 </text>
 <line opacity="0.1" stroke="#000000" stroke-width="1" x1="65" y1="374" x2="65" y2="30"/>
 <line opacity="0.1" stroke="#000000" stroke-width="1" x1="72" y1="374" x2="72" y2="30"/>

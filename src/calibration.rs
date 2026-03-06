@@ -1,12 +1,19 @@
 /// SSVI calibration: solve θ implicitly, then minimize ||W - tv||².
 
-use crate::brent::brent;
 use crate::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMeadResult};
 use crate::ssvi;
 
-/// Solve θ from the implicit ATM consistency equation:
-///   θ = θ* / (1 + ρ · φ(θ) · k*)
-/// using Brent's method on h(θ) = θ - θ*/(1 + ρ·φ(θ)·k*) = 0.
+/// Solve θ from the ATM consistency equation w(k*, θ) = θ*
+/// using Newton's method with initial guess θ₀ = θ*.
+///
+/// Each Newton step:
+///   φ  = η / (θ^γ · (1+θ)^(1-γ))
+///   S  = sqrt((φ·k* + ρ)² + (1 - ρ²))
+///   w  = (θ/2) · (1 + ρ·φ·k* + S)
+///   ∂w = w/θ - (γ+θ)·φ·k* / (2(1+θ)) · (ρ + (φ·k* + ρ)/S)
+///   θ ← θ - (w - θ*) / ∂w
+///
+/// Typically converges in 2–3 iterations.
 pub fn solve_theta(
     eta: f64,
     gamma: f64,
@@ -14,37 +21,69 @@ pub fn solve_theta(
     theta_star: f64,
     k_star: f64,
 ) -> Option<f64> {
-    // When k_star=0, the equation reduces to θ = θ* (no φ dependence).
     if k_star.abs() < 1e-15 {
         return Some(theta_star);
     }
 
-    let h = |theta: f64| -> f64 {
-        if theta <= 0.0 {
-            return -theta_star;
-        }
-        let p = ssvi::phi(theta, eta, gamma);
-        theta - theta_star / (1.0 + rho * p * k_star)
-    };
+    let mut theta = theta_star; // initial guess
+    let max_iter = 20;
+    let tol = 1e-14;
 
-    // Bracket: root is near theta_star, search [theta_star/1000, 100*theta_star]
-    let lo = theta_star * 1e-3;
-    let hi = theta_star * 100.0;
-    let res = brent(h, lo, hi, 1e-14, 200);
-    if res.converged && res.root > 0.0 {
-        Some(res.root)
-    } else {
-        None
+    for _ in 0..max_iter {
+        if theta <= 0.0 {
+            return None;
+        }
+
+        let phi = ssvi::phi(theta, eta, gamma);
+        let pk = phi * k_star;
+        let s = ((pk + rho).powi(2) + (1.0 - rho * rho)).sqrt();
+        let w = 0.5 * theta * (1.0 + rho * pk + s);
+
+        let residual = w - theta_star;
+        if residual.abs() < tol {
+            return Some(theta);
+        }
+
+        // ∂w/∂θ
+        let dw = w / theta
+            - (gamma + theta) * phi * k_star / (2.0 * (1.0 + theta))
+                * (rho + (pk + rho) / s);
+
+        if dw.abs() < 1e-30 {
+            return None;
+        }
+
+        theta -= residual / dw;
     }
+
+    // Check final convergence
+    if theta > 0.0 {
+        let phi = ssvi::phi(theta, eta, gamma);
+        let pk = phi * k_star;
+        let s = ((pk + rho).powi(2) + (1.0 - rho * rho)).sqrt();
+        let w = 0.5 * theta * (1.0 + rho * pk + s);
+        if (w - theta_star).abs() < tol * 100.0 {
+            return Some(theta);
+        }
+    }
+    None
 }
 
-/// Squared error between model and market total variances.
-fn squared_error(model: &[f64], market: &[f64]) -> f64 {
-    model
-        .iter()
-        .zip(market.iter())
-        .map(|(m, w)| (m - w).powi(2))
-        .sum()
+/// Weighted squared error between model and market total variances.
+fn weighted_squared_error(model: &[f64], market: &[f64], weights: Option<&[f64]>) -> f64 {
+    match weights {
+        Some(w) => model
+            .iter()
+            .zip(market.iter())
+            .zip(w.iter())
+            .map(|((m, mkt), &wt)| wt * (m - mkt).powi(2))
+            .sum(),
+        None => model
+            .iter()
+            .zip(market.iter())
+            .map(|(m, mkt)| (m - mkt).powi(2))
+            .sum(),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +92,7 @@ pub struct CalibrationInput<'a> {
     pub w_market: &'a [f64],
     pub theta_star: f64,
     pub k_star: f64,
+    pub weights: Option<&'a [f64]>,
 }
 
 #[derive(Debug, Clone)]
@@ -95,7 +135,7 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Option<
             };
 
             let w_model = ssvi::total_variance_slice(input.k_slice, theta, eta, gamma, rho);
-            squared_error(&w_model, input.w_market)
+            weighted_squared_error(&w_model, input.w_market, input.weights)
         };
 
         let res = nelder_mead_bounded(objective_2d, &[0.5, 0.5], &lb_eg, &ub_eg, config);
@@ -121,12 +161,82 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Option<
         };
 
         let w_model = ssvi::total_variance_slice(input.k_slice, theta, eta, gamma, rho);
-        squared_error(&w_model, input.w_market)
+        weighted_squared_error(&w_model, input.w_market, input.weights)
     };
 
     let lb_3d = [1e-6, 1e-6, -0.999];
     let ub_3d = [2.0 - 1e-6, 1.0 - 1e-6, 0.999];
     let res = nelder_mead_bounded(objective_3d, &best_x, &lb_3d, &ub_3d, config);
+
+    let eta = res.x[0];
+    let gamma = res.x[1];
+    let rho = res.x[2];
+    let theta = solve_theta(eta, gamma, rho, input.theta_star, input.k_star)?;
+
+    Some(CalibrationResult {
+        eta,
+        gamma,
+        rho,
+        theta,
+        optimizer: res,
+    })
+}
+
+/// Previous slice info for calendar arbitrage penalty.
+#[derive(Debug, Clone)]
+pub struct PrevSlice {
+    pub theta: f64,
+    pub eta: f64,
+    pub gamma: f64,
+    pub rho: f64,
+}
+
+/// Calendar arbitrage penalty: sum of max(0, w_prev(k) - w_cur(k))^2
+/// evaluated at the given penalty sample points.
+fn calendar_penalty(prev: &PrevSlice, theta: f64, eta: f64, gamma: f64, rho: f64, k_penalty: &[f64]) -> f64 {
+    k_penalty.iter().map(|&k| {
+        let w_prev = ssvi::total_variance(k, prev.theta, prev.eta, prev.gamma, prev.rho);
+        let w_cur = ssvi::total_variance(k, theta, eta, gamma, rho);
+        let violation = (w_prev - w_cur).max(0.0);
+        violation * violation
+    }).sum()
+}
+
+/// Calibrate SSVI with calendar arbitrage penalty.
+///
+/// Same as `calibrate` but adds λ · Σ max(0, w_prev(k) - w(k))² to the objective.
+/// `k_penalty` are the sample points for checking calendar arbitrage.
+pub fn calibrate_with_calendar_penalty(
+    input: &CalibrationInput,
+    config: &NelderMeadConfig,
+    prev: &PrevSlice,
+    k_penalty: &[f64],
+    lambda: f64,
+    init: &[f64; 3], // initial [eta, gamma, rho] from unconstrained fit
+) -> Option<CalibrationResult> {
+    let objective_3d = |x: &[f64]| -> f64 {
+        let eta = x[0];
+        let gamma = x[1];
+        let rho = x[2];
+
+        if !ssvi::no_arbitrage_satisfied(eta, rho) {
+            return 1e10;
+        }
+
+        let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
+            Some(t) => t,
+            None => return 1e10,
+        };
+
+        let w_model = ssvi::total_variance_slice(input.k_slice, theta, eta, gamma, rho);
+        let fit_err = weighted_squared_error(&w_model, input.w_market, input.weights);
+        let penalty = calendar_penalty(prev, theta, eta, gamma, rho, k_penalty);
+        fit_err + lambda * penalty
+    };
+
+    let lb_3d = [1e-6, 1e-6, -0.999];
+    let ub_3d = [2.0 - 1e-6, 1.0 - 1e-6, 0.999];
+    let res = nelder_mead_bounded(objective_3d, init, &lb_3d, &ub_3d, config);
 
     let eta = res.x[0];
     let gamma = res.x[1];
@@ -180,10 +290,9 @@ mod tests {
         let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.01);
         assert!(theta.is_some());
         let t = theta.unwrap();
-        // Verify the implicit equation holds
-        let p = crate::ssvi::phi(t, 0.8, 0.4);
-        let rhs = 0.04 / (1.0 + (-0.35) * p * 0.01);
-        assert!((t - rhs).abs() < 1e-12);
+        // Verify w(k*, θ) = θ*
+        let w = ssvi::total_variance(0.01, t, 0.8, 0.4, -0.35);
+        assert!((w - 0.04).abs() < 1e-12, "w={}, θ*=0.04, diff={}", w, (w - 0.04).abs());
     }
 
     #[test]
@@ -198,6 +307,7 @@ mod tests {
             w_market: &w_market,
             theta_star,
             k_star,
+            weights: None,
         };
 
         let res = calibrate(&input, &NelderMeadConfig::default())
@@ -243,6 +353,7 @@ mod tests {
             w_market: &w_market,
             theta_star,
             k_star,
+            weights: None,
         };
 
         let res = calibrate(&input, &NelderMeadConfig::default())
@@ -261,6 +372,7 @@ mod tests {
             w_market: &w_market,
             theta_star,
             k_star,
+            weights: None,
         };
 
         let res = calibrate(&input, &NelderMeadConfig::default())

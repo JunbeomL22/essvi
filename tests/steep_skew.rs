@@ -59,6 +59,7 @@ fn run_calibration(label: &str, t_expiry: f64) {
         w_market: &w_market,
         theta_star,
         k_star,
+        weights: None,
     };
 
     let config = NelderMeadConfig::default();
@@ -139,6 +140,7 @@ fn steep_skew_fit_quality() {
             w_market: &w_market,
             theta_star,
             k_star: 0.0,
+            weights: None,
         };
 
         let res = calibrate(&input, &NelderMeadConfig::default());

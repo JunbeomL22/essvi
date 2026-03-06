@@ -67,11 +67,16 @@ fn run_scenario(s: Scenario) -> Option<FitResult> {
     let (k_slice, w_market) = make_market_data(&s);
     let theta_star = s.atm_vol * s.atm_vol * s.t_expiry;
 
+    let weights: Vec<f64> = k_slice.iter().map(|&k| {
+        if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 }
+    }).collect();
+
     let input = CalibrationInput {
         k_slice: &k_slice,
         w_market: &w_market,
         theta_star,
         k_star: s.k_star,
+        weights: Some(&weights),
     };
 
     let config = NelderMeadConfig::default();

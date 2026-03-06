@@ -24,29 +24,29 @@ struct SliceData {
 fn build_market_slices() -> Vec<SliceData> {
     vec![
         // T=0.0301: Very short expiry, narrow tradable range
-        make_slice(0.0301, -0.30, 0.10, 40, 0.200, 0.28, 0.04, 0.0015),
+        make_slice(0.0301, -0.30, 0.20, 60, 0.200, 0.28, 0.08, 0.0015),
         // T=0.1068
-        make_slice(0.1068, -0.40, 0.15, 40, 0.185, 0.24, 0.03, 0.0012),
+        make_slice(0.1068, -0.40, 0.25, 60, 0.185, 0.24, 0.06, 0.0012),
         // T=0.1936
-        make_slice(0.1936, -0.45, 0.20, 40, 0.175, 0.22, 0.03, 0.0010),
+        make_slice(0.1936, -0.45, 0.30, 60, 0.175, 0.22, 0.06, 0.0010),
         // T=0.2795
-        make_slice(0.2795, -0.50, 0.22, 40, 0.170, 0.20, 0.025, 0.0010),
+        make_slice(0.2795, -0.50, 0.35, 60, 0.170, 0.20, 0.05, 0.0010),
         // T=0.4376
-        make_slice(0.4376, -0.55, 0.25, 40, 0.165, 0.18, 0.02, 0.0008),
+        make_slice(0.4376, -0.55, 0.40, 60, 0.165, 0.18, 0.04, 0.0008),
         // T=0.7014
-        make_slice(0.7014, -0.55, 0.30, 40, 0.158, 0.15, 0.02, 0.0008),
+        make_slice(0.7014, -0.55, 0.45, 60, 0.158, 0.15, 0.04, 0.0008),
         // T=0.9507
-        make_slice(0.9507, -0.55, 0.30, 40, 0.155, 0.14, 0.02, 0.0007),
+        make_slice(0.9507, -0.55, 0.45, 60, 0.155, 0.14, 0.04, 0.0007),
         // T=1.0274
-        make_slice(1.0274, -0.55, 0.30, 40, 0.153, 0.13, 0.02, 0.0007),
+        make_slice(1.0274, -0.55, 0.45, 60, 0.153, 0.13, 0.04, 0.0007),
         // T=1.1988
-        make_slice(1.1988, -0.60, 0.32, 40, 0.152, 0.12, 0.018, 0.0007),
+        make_slice(1.1988, -0.60, 0.50, 60, 0.152, 0.12, 0.035, 0.0007),
         // T=1.4495
-        make_slice(1.4495, -0.65, 0.35, 40, 0.155, 0.11, 0.015, 0.0006),
+        make_slice(1.4495, -0.65, 0.55, 60, 0.155, 0.11, 0.03, 0.0006),
         // T=1.9476
-        make_slice(1.9476, -0.75, 0.40, 40, 0.160, 0.10, 0.012, 0.0006),
+        make_slice(1.9476, -0.75, 0.60, 60, 0.160, 0.10, 0.025, 0.0006),
         // T=2.9452
-        make_slice(2.9452, -0.90, 0.45, 40, 0.168, 0.09, 0.010, 0.0005),
+        make_slice(2.9452, -0.90, 0.65, 60, 0.168, 0.09, 0.02, 0.0005),
     ]
 }
 
@@ -74,7 +74,7 @@ fn make_slice(
     let seed = (t_expiry * 10000.0) as u64;
 
     // SVI-like parameters derived from inputs
-    let rho_shape = -0.7; // negative correlation = put skew
+    let rho_shape = -0.5; // less negative = more call-side vol
     let d = 0.08 + 0.05 * t_expiry.sqrt(); // smoothing (wider for longer T)
     let a = skew * 0.45; // amplitude
 
@@ -129,11 +129,16 @@ fn fit_slice(slice: &SliceData) -> Option<FitResult> {
     let theta_star = atm_vol * atm_vol * t;
     let k_star = slice.k[slice.k.len() / 2]; // midpoint as ATM reference
 
+    let weights: Vec<f64> = slice.k.iter().map(|&k| {
+        if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 }
+    }).collect();
+
     let input = CalibrationInput {
         k_slice: &slice.k,
         w_market: &w_market,
         theta_star,
         k_star,
+        weights: Some(&weights),
     };
 
     let config = NelderMeadConfig::default();
@@ -272,7 +277,7 @@ fn main() {
     let mut md = String::new();
 
     md.push_str("# SSVI Real-World Fit Report\n\n");
-    md.push_str("Calibration of SSVI to approximate real market data (12 expiry slices, ~40 points each).\n\n");
+    md.push_str("Calibration of SSVI to approximate real market data (12 expiry slices, ~60 points each).\n\n");
 
     // Summary table
     md.push_str("## Calibration Summary\n\n");
