@@ -21,8 +21,8 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 ### Active
 
-- [ ] CalibrationConfig struct (bounds, grid steps, tolerances, lambda) with Default impl
-- [ ] Module restructuring (solver/, model/ submodules)
+- [x] CalibrationConfig struct (bounds, grid steps, tolerances, lambda) with Default impl
+- [x] Module restructuring (solver/, model/ submodules)
 - [x] Impl blocks on domain structs (CalibrationResult, CalibrationInput, etc.)
 - [x] Proper error types (Result<T, CalibError> replacing Option<T>)
 - [ ] Deduplicate binary code (shared SliceData, make_slice, FitResult, plot_fit)

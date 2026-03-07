@@ -1,8 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use essvi::calibration::{
-    calibrate, calibrate_with_calendar_penalty, solve_theta, CalibrationInput, PrevSlice,
+    calibrate, calibrate_with_calendar_penalty, solve_theta, CalibrationConfig, CalibrationInput,
+    PrevSlice,
 };
-use essvi::nelder_mead::NelderMeadConfig;
 use essvi::ssvi;
 
 fn make_20pt_slice() -> (Vec<f64>, Vec<f64>, f64, f64) {
@@ -12,7 +12,8 @@ fn make_20pt_slice() -> (Vec<f64>, Vec<f64>, f64, f64) {
     let theta_star = 0.04;
     let k_star = -0.01;
 
-    let theta = solve_theta(eta, gamma, rho, theta_star, k_star).unwrap();
+    let config = CalibrationConfig::default();
+    let theta = solve_theta(eta, gamma, rho, theta_star, k_star, &config).unwrap();
     let k_slice: Vec<f64> = (0..20).map(|i| -0.5 + (i as f64) / 19.0).collect();
     let w_market = ssvi::total_variance_slice(&k_slice, theta, eta, gamma, rho);
 
@@ -21,6 +22,7 @@ fn make_20pt_slice() -> (Vec<f64>, Vec<f64>, f64, f64) {
 
 /// Build 12 slices mimicking the real-world surface data.
 fn make_surface_slices() -> Vec<(Vec<f64>, Vec<f64>, f64, f64, f64)> {
+    let config = CalibrationConfig::default();
     let params: Vec<(f64, f64, f64, f64)> = vec![
         // (t_expiry, eta, gamma, rho)
         (0.0301, 0.54, 0.29, -0.32),
@@ -43,7 +45,7 @@ fn make_surface_slices() -> Vec<(Vec<f64>, Vec<f64>, f64, f64, f64)> {
             let atm_vol = 0.20 - 0.02 * t.sqrt();
             let theta_star = atm_vol * atm_vol * t;
             let k_star = 0.03;
-            let theta = solve_theta(eta, gamma, rho, theta_star, k_star).unwrap();
+            let theta = solve_theta(eta, gamma, rho, theta_star, k_star, &config).unwrap();
             let k_slice: Vec<f64> = (0..60).map(|i| -0.3 + (i as f64) * 0.6 / 59.0).collect();
             let w_market = ssvi::total_variance_slice(&k_slice, theta, eta, gamma, rho);
             (k_slice, w_market, theta_star, k_star, t)
@@ -60,7 +62,7 @@ fn bench_calibrate_20pt(c: &mut Criterion) {
         k_star,
         weights: None,
     };
-    let config = NelderMeadConfig::default();
+    let config = CalibrationConfig::default();
 
     c.bench_function("calibrate_20pt_slice", |b| {
         b.iter(|| calibrate(black_box(&input), black_box(&config)))
@@ -69,6 +71,7 @@ fn bench_calibrate_20pt(c: &mut Criterion) {
 
 fn bench_solve_theta(c: &mut Criterion) {
     let k_stars = [0.01, 0.02, 0.03, 0.04, 0.05, 0.1];
+    let config = CalibrationConfig::default();
     let mut group = c.benchmark_group("solve_theta");
     for &k_star in &k_stars {
         group.bench_function(format!("k_star={:.2}", k_star), |b| {
@@ -79,6 +82,7 @@ fn bench_solve_theta(c: &mut Criterion) {
                     black_box(-0.35),
                     black_box(0.04),
                     black_box(k_star),
+                    black_box(&config),
                 )
             })
         });
@@ -103,7 +107,7 @@ fn bench_total_variance_slice(c: &mut Criterion) {
 
 fn bench_surface_calibration(c: &mut Criterion) {
     let slices = make_surface_slices();
-    let config = NelderMeadConfig::default();
+    let config = CalibrationConfig::default();
     let k_penalty: Vec<f64> = (0..=48).map(|i| -0.8 + i as f64 * 0.025).collect();
     let lambda = 100.0;
 

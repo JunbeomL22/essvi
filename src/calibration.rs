@@ -4,6 +4,68 @@ use crate::solver::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMe
 use crate::model::ssvi;
 use std::fmt;
 
+/// Configuration for the SSVI calibration pipeline.
+///
+/// Collects all tuning knobs — parameter bounds, rho grid settings,
+/// solver tolerances, and calendar penalty defaults — into one struct
+/// so callers can override any subset while keeping sensible defaults.
+#[derive(Debug, Clone)]
+pub struct CalibrationConfig {
+    // ── Parameter bounds ───────────────────────────────────────
+    /// Lower bound for η (must be > 0).
+    pub eta_lower: f64,
+    /// Upper bound for η (must be < 2 to satisfy no-arb with ρ near 0).
+    pub eta_upper: f64,
+    /// Lower bound for γ (must be > 0).
+    pub gamma_lower: f64,
+    /// Upper bound for γ (must be < 1).
+    pub gamma_upper: f64,
+    /// Lower bound for ρ (must be > -1).
+    pub rho_lower: f64,
+    /// Upper bound for ρ (must be < 1).
+    pub rho_upper: f64,
+
+    // ── Rho grid sweep ─────────────────────────────────────────
+    /// Number of steps in the ρ grid sweep (n_rho+1 points evaluated).
+    pub n_rho: usize,
+    /// Start of ρ sweep range.
+    pub rho_sweep_start: f64,
+    /// End of ρ sweep range.
+    pub rho_sweep_end: f64,
+
+    // ── solve_theta Newton solver ──────────────────────────────
+    /// Maximum Newton iterations for θ solve.
+    pub theta_max_iter: usize,
+    /// Convergence tolerance for θ solve residual.
+    pub theta_tol: f64,
+
+    // ── Nelder-Mead optimizer ──────────────────────────────────
+    /// Configuration passed to the Nelder-Mead optimizer.
+    pub nelder_mead: NelderMeadConfig,
+}
+
+impl Default for CalibrationConfig {
+    fn default() -> Self {
+        Self {
+            eta_lower: 1e-6,
+            eta_upper: 2.0 - 1e-6,
+            gamma_lower: 1e-6,
+            gamma_upper: 1.0 - 1e-6,
+            rho_lower: -0.999,
+            rho_upper: 0.999,
+
+            n_rho: 20,
+            rho_sweep_start: -0.95,
+            rho_sweep_end: 0.95,
+
+            theta_max_iter: 20,
+            theta_tol: 1e-14,
+
+            nelder_mead: NelderMeadConfig::default(),
+        }
+    }
+}
+
 /// Error type for calibration failures.
 ///
 /// Provides distinct variants so callers can distinguish failure modes
@@ -51,14 +113,15 @@ pub fn solve_theta(
     rho: f64,
     theta_star: f64,
     k_star: f64,
+    config: &CalibrationConfig,
 ) -> Result<f64, CalibError> {
     if k_star.abs() < 1e-15 {
         return Ok(theta_star);
     }
 
     let mut theta = theta_star; // initial guess
-    let max_iter = 20;
-    let tol = 1e-14;
+    let max_iter = config.theta_max_iter;
+    let tol = config.theta_tol;
 
     for _ in 0..max_iter {
         if theta <= 0.0 {
@@ -158,17 +221,18 @@ impl CalibrationResult {
 /// Uses ρ-grid sweep + 2D Nelder-Mead on (η, γ) to avoid local minima,
 /// as recommended for SSVI calibration. The equality constraint (ATM
 /// consistency) is eliminated by solving θ implicitly inside the objective.
-pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Result<CalibrationResult, CalibError> {
-    let lb_eg = [1e-6, 1e-6];
-    let ub_eg = [2.0 - 1e-6, 1.0 - 1e-6];
+pub fn calibrate(input: &CalibrationInput, config: &CalibrationConfig) -> Result<CalibrationResult, CalibError> {
+    let lb_eg = [config.eta_lower, config.gamma_lower];
+    let ub_eg = [config.eta_upper, config.gamma_upper];
 
     let mut best_f = f64::INFINITY;
     let mut best_x = [0.5, 0.5, 0.0];
 
-    // ρ grid: sweep from -0.95 to 0.95 in 20 steps
-    let n_rho = 20;
+    // ρ grid: sweep from rho_sweep_start to rho_sweep_end in n_rho steps
+    let n_rho = config.n_rho;
+    let rho_range = config.rho_sweep_end - config.rho_sweep_start;
     for i in 0..=n_rho {
-        let rho = -0.95 + (i as f64) * 1.9 / (n_rho as f64);
+        let rho = config.rho_sweep_start + (i as f64) * rho_range / (n_rho as f64);
 
         let objective_2d = |x: &[f64]| -> f64 {
             let eta = x[0];
@@ -178,7 +242,7 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Result<
                 return 1e10;
             }
 
-            let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
+            let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star, config) {
                 Ok(t) => t,
                 Err(_) => return 1e10,
             };
@@ -187,7 +251,7 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Result<
             weighted_squared_error(&w_model, input.w_market, input.weights)
         };
 
-        let res = nelder_mead_bounded(objective_2d, &[0.5, 0.5], &lb_eg, &ub_eg, config);
+        let res = nelder_mead_bounded(objective_2d, &[0.5, 0.5], &lb_eg, &ub_eg, &config.nelder_mead);
         if res.f < best_f {
             best_f = res.f;
             best_x = [res.x[0], res.x[1], rho];
@@ -204,7 +268,7 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Result<
             return 1e10;
         }
 
-        let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
+        let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star, config) {
             Ok(t) => t,
             Err(_) => return 1e10,
         };
@@ -213,14 +277,14 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Result<
         weighted_squared_error(&w_model, input.w_market, input.weights)
     };
 
-    let lb_3d = [1e-6, 1e-6, -0.999];
-    let ub_3d = [2.0 - 1e-6, 1.0 - 1e-6, 0.999];
-    let res = nelder_mead_bounded(objective_3d, &best_x, &lb_3d, &ub_3d, config);
+    let lb_3d = [config.eta_lower, config.gamma_lower, config.rho_lower];
+    let ub_3d = [config.eta_upper, config.gamma_upper, config.rho_upper];
+    let res = nelder_mead_bounded(objective_3d, &best_x, &lb_3d, &ub_3d, &config.nelder_mead);
 
     let eta = res.x[0];
     let gamma = res.x[1];
     let rho = res.x[2];
-    let theta = solve_theta(eta, gamma, rho, input.theta_star, input.k_star)?;
+    let theta = solve_theta(eta, gamma, rho, input.theta_star, input.k_star, config)?;
 
     Ok(CalibrationResult {
         eta,
@@ -257,7 +321,7 @@ fn calendar_penalty(prev: &PrevSlice, theta: f64, eta: f64, gamma: f64, rho: f64
 /// `k_penalty` are the sample points for checking calendar arbitrage.
 pub fn calibrate_with_calendar_penalty(
     input: &CalibrationInput,
-    config: &NelderMeadConfig,
+    config: &CalibrationConfig,
     prev: &PrevSlice,
     k_penalty: &[f64],
     lambda: f64,
@@ -272,7 +336,7 @@ pub fn calibrate_with_calendar_penalty(
             return 1e10;
         }
 
-        let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
+        let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star, config) {
             Ok(t) => t,
             Err(_) => return 1e10,
         };
@@ -283,14 +347,14 @@ pub fn calibrate_with_calendar_penalty(
         fit_err + lambda * penalty
     };
 
-    let lb_3d = [1e-6, 1e-6, -0.999];
-    let ub_3d = [2.0 - 1e-6, 1.0 - 1e-6, 0.999];
-    let res = nelder_mead_bounded(objective_3d, init, &lb_3d, &ub_3d, config);
+    let lb_3d = [config.eta_lower, config.gamma_lower, config.rho_lower];
+    let ub_3d = [config.eta_upper, config.gamma_upper, config.rho_upper];
+    let res = nelder_mead_bounded(objective_3d, init, &lb_3d, &ub_3d, &config.nelder_mead);
 
     let eta = res.x[0];
     let gamma = res.x[1];
     let rho = res.x[2];
-    let theta = solve_theta(eta, gamma, rho, input.theta_star, input.k_star)?;
+    let theta = solve_theta(eta, gamma, rho, input.theta_star, input.k_star, config)?;
 
     Ok(CalibrationResult {
         eta,
@@ -315,7 +379,8 @@ mod tests {
         let k_star = -0.01;    // Slightly off-ATM to break η/γ degeneracy
 
         // Solve true θ
-        let true_theta = solve_theta(true_eta, true_gamma, true_rho, theta_star, k_star)
+        let config = CalibrationConfig::default();
+        let true_theta = solve_theta(true_eta, true_gamma, true_rho, theta_star, k_star, &config)
             .expect("true theta must solve");
 
         // 20 log-moneyness points from -0.5 to +0.5
@@ -327,7 +392,8 @@ mod tests {
 
     #[test]
     fn solve_theta_basic() {
-        let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.0);
+        let config = CalibrationConfig::default();
+        let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.0, &config);
         assert!(theta.is_ok());
         let t = theta.unwrap();
         // With k*=0, the equation simplifies to θ = θ*
@@ -336,7 +402,8 @@ mod tests {
 
     #[test]
     fn solve_theta_nonzero_kstar() {
-        let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.01);
+        let config = CalibrationConfig::default();
+        let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.01, &config);
         assert!(theta.is_ok());
         let t = theta.unwrap();
         // Verify w(k*, θ) = θ*
@@ -348,7 +415,8 @@ mod tests {
     fn calibrate_recovers_parameters() {
         let (k_slice, w_market, theta_star, k_star) = make_sample_slice();
 
-        let true_theta = solve_theta(0.8, 0.4, -0.35, theta_star, k_star).unwrap();
+        let config = CalibrationConfig::default();
+        let true_theta = solve_theta(0.8, 0.4, -0.35, theta_star, k_star, &config).unwrap();
         let true_phi = ssvi::phi(true_theta, 0.8, 0.4);
 
         let input = CalibrationInput {
@@ -359,7 +427,7 @@ mod tests {
             weights: None,
         };
 
-        let res = calibrate(&input, &NelderMeadConfig::default())
+        let res = calibrate(&input, &config)
             .expect("calibration must succeed");
 
         assert!(res.optimizer.converged, "optimizer did not converge");
@@ -391,7 +459,8 @@ mod tests {
         let theta_star = 0.05;
         let k_star = -0.02;
 
-        let true_theta = solve_theta(true_eta, true_gamma, true_rho, theta_star, k_star)
+        let config = CalibrationConfig::default();
+        let true_theta = solve_theta(true_eta, true_gamma, true_rho, theta_star, k_star, &config)
             .expect("true theta must solve");
 
         let k_slice: Vec<f64> = (0..20).map(|i| -0.4 + (i as f64) * 0.04).collect();
@@ -405,7 +474,7 @@ mod tests {
             weights: None,
         };
 
-        let res = calibrate(&input, &NelderMeadConfig::default())
+        let res = calibrate(&input, &config)
             .expect("calibration must succeed");
 
         assert!(res.optimizer.converged);
@@ -424,7 +493,7 @@ mod tests {
             weights: None,
         };
 
-        let res = calibrate(&input, &NelderMeadConfig::default())
+        let res = calibrate(&input, &CalibrationConfig::default())
             .expect("calibration must succeed");
 
         assert!(

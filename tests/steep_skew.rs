@@ -3,8 +3,7 @@
 /// Scenario: T near zero, ATM vol = 0.4, vol at k=0.7 reaches 0.7.
 /// This produces a very steep smile — does SSVI fit it well?
 
-use essvi::calibration::{calibrate, CalibrationInput};
-use essvi::nelder_mead::NelderMeadConfig;
+use essvi::calibration::{calibrate, CalibrationConfig, CalibrationInput};
 use essvi::ssvi;
 
 /// Build synthetic market data for a steep-skew short-expiry slice.
@@ -62,7 +61,7 @@ fn run_calibration(label: &str, t_expiry: f64) {
         weights: None,
     };
 
-    let config = NelderMeadConfig::default();
+    let config = CalibrationConfig::default();
     let res = calibrate(&input, &config);
 
     match res {
@@ -143,7 +142,7 @@ fn steep_skew_fit_quality() {
             weights: None,
         };
 
-        let res = calibrate(&input, &NelderMeadConfig::default());
+        let res = calibrate(&input, &CalibrationConfig::default());
         assert!(res.is_ok(), "calibration failed at T={}", t);
         let r = res.unwrap();
 

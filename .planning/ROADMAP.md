@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Module Restructuring** - Move source files into solver/ and model/ submodule hierarchy
 - [x] **Phase 2: Error Types and Impl Blocks** - Replace Option returns with Result<T, CalibError> and add methods to domain structs
-- [ ] **Phase 3: Calibration Config** - Extract hardcoded constants into CalibrationConfig struct with Default impl
+- [x] **Phase 3: Calibration Config** - Extract hardcoded constants into CalibrationConfig struct with Default impl
 - [ ] **Phase 4: Binary Deduplication** - Extract shared code from fit_real binaries into a common module
 - [ ] **Phase 5: Test Migration** - Move all inline tests to tests/ directory and verify coverage
 
@@ -53,7 +53,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. calibrate_with_calendar_penalty() accepts CalibrationConfig for penalty parameters
   4. solve_theta() respects tolerance and max_iter from CalibrationConfig
   5. A user can construct a custom CalibrationConfig, pass it to calibrate(), and observe different optimization behavior (e.g., narrower rho sweep)
-**Plans**: TBD
+**Plans**: Completed (1 plan: define CalibrationConfig struct with Default, update solve_theta/calibrate/calibrate_with_calendar_penalty signatures, update all callers)
 
 ### Phase 4: Binary Deduplication
 **Goal**: Shared code between fit_real.rs and fit_real_surface.rs lives in one place, eliminating duplication
@@ -84,6 +84,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Module Restructuring | 1/1 | Complete | 2026-03-07 |
 | 2. Error Types and Impl Blocks | 1/1 | Complete | 2026-03-07 |
-| 3. Calibration Config | 0/0 | Not started | - |
+| 3. Calibration Config | 1/1 | Complete | 2026-03-07 |
 | 4. Binary Deduplication | 0/0 | Not started | - |
 | 5. Test Migration | 0/0 | Not started | - |

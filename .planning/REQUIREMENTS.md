@@ -9,12 +9,12 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 
 ### Configuration
 
-- [ ] **CONF-01**: CalibrationConfig struct holds parameter bounds (eta, gamma, rho ranges), rho grid config (n_rho, sweep range), and solver tolerances
-- [ ] **CONF-02**: CalibrationConfig holds calendar penalty config (k_penalty range, step, lambda)
-- [ ] **CONF-03**: Default impl on CalibrationConfig returns current hardcoded values
-- [ ] **CONF-04**: calibrate() accepts CalibrationConfig instead of relying on internal constants
-- [ ] **CONF-05**: calibrate_with_calendar_penalty() accepts CalibrationConfig for penalty parameters
-- [ ] **CONF-06**: solve_theta() tolerances and max_iter configurable via CalibrationConfig
+- [x] **CONF-01**: CalibrationConfig struct holds parameter bounds (eta, gamma, rho ranges), rho grid config (n_rho, sweep range), and solver tolerances
+- [x] **CONF-02**: CalibrationConfig holds calendar penalty config (k_penalty range, step, lambda)
+- [x] **CONF-03**: Default impl on CalibrationConfig returns current hardcoded values
+- [x] **CONF-04**: calibrate() accepts CalibrationConfig instead of relying on internal constants
+- [x] **CONF-05**: calibrate_with_calendar_penalty() accepts CalibrationConfig for penalty parameters
+- [x] **CONF-06**: solve_theta() tolerances and max_iter configurable via CalibrationConfig
 
 ### Structure
 
@@ -65,12 +65,12 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONF-01 | Phase 3 | Pending |
-| CONF-02 | Phase 3 | Pending |
-| CONF-03 | Phase 3 | Pending |
-| CONF-04 | Phase 3 | Pending |
-| CONF-05 | Phase 3 | Pending |
-| CONF-06 | Phase 3 | Pending |
+| CONF-01 | Phase 3 | Done |
+| CONF-02 | Phase 3 | Done |
+| CONF-03 | Phase 3 | Done |
+| CONF-04 | Phase 3 | Done |
+| CONF-05 | Phase 3 | Done |
+| CONF-06 | Phase 3 | Done |
 | STRC-01 | Phase 1 | Done |
 | STRC-02 | Phase 1 | Done |
 | STRC-03 | Phase 1 | Done |

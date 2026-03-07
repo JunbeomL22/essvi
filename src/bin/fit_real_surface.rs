@@ -5,9 +5,9 @@
 ///         sampling k from -0.5 to 0.5 step 0.05, lambda=100.
 
 use essvi::calibration::{
-    calibrate, calibrate_with_calendar_penalty, CalibrationInput, CalibrationResult, PrevSlice,
+    calibrate, calibrate_with_calendar_penalty, CalibrationConfig, CalibrationInput,
+    CalibrationResult, PrevSlice,
 };
-use essvi::nelder_mead::NelderMeadConfig;
 use essvi::ssvi;
 use plotters::prelude::*;
 use std::fs;
@@ -227,7 +227,7 @@ fn main() {
     fs::create_dir_all(plot_dir).expect("create plot dir");
 
     let slices = build_market_slices();
-    let config = NelderMeadConfig::default();
+    let config = CalibrationConfig::default();
 
     // Penalty sample points: k from -0.5 to 0.5 step 0.05
     let k_penalty: Vec<f64> = (0..=20).map(|i| -0.5 + i as f64 * 0.05).collect();

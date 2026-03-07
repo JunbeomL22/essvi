@@ -1,8 +1,7 @@
 /// Generate SSVI fit quality report across parameter grid:
 ///   T (expiry), skew slope — with η diagnostics showing constraint saturation.
 
-use essvi::calibration::{calibrate, CalibrationInput};
-use essvi::nelder_mead::NelderMeadConfig;
+use essvi::calibration::{calibrate, CalibrationConfig, CalibrationInput};
 use essvi::ssvi;
 use plotters::prelude::*;
 use std::fs;
@@ -79,7 +78,7 @@ fn run_scenario(s: Scenario) -> Option<FitResult> {
         weights: Some(&weights),
     };
 
-    let config = NelderMeadConfig::default();
+    let config = CalibrationConfig::default();
     let res = calibrate(&input, &config).ok()?;
 
     let w_fit = ssvi::total_variance_slice(&k_slice, res.theta, res.eta, res.gamma, res.rho);

@@ -3,8 +3,7 @@
 /// Each slice has ~40 data points approximating the scatter plots in the image.
 /// The data mimics typical equity index (SPX-like) implied volatility surfaces.
 
-use essvi::calibration::{calibrate, CalibrationInput};
-use essvi::nelder_mead::NelderMeadConfig;
+use essvi::calibration::{calibrate, CalibrationConfig, CalibrationInput};
 use essvi::ssvi;
 use plotters::prelude::*;
 use std::fs;
@@ -141,7 +140,7 @@ fn fit_slice(slice: &SliceData) -> Option<FitResult> {
         weights: Some(&weights),
     };
 
-    let config = NelderMeadConfig::default();
+    let config = CalibrationConfig::default();
     let res = calibrate(&input, &config).ok()?;
 
     let w_fit = ssvi::total_variance_slice(&slice.k, res.theta, res.eta, res.gamma, res.rho);
