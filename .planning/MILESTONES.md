@@ -1,5 +1,32 @@
 # Milestones
 
+## v1.2 Market Data Collection (Shipped: 2026-03-07)
+
+**Delivered:** Collected and documented real European-style index option chain data (SPX + NDX) with canonical CSV schema, source provenance, and quality notes.
+
+**Phases completed:** 9-11 (3 plans total)
+**Requirements:** 9/9 complete (STOR x3, DATA x3, DOCS x3)
+**Data:** 33,680 CSV rows across 3 option chain files
+**Git range:** 3431c6f..1e03957
+**Timeline:** 2 days (2026-03-05 to 2026-03-07)
+
+**Key accomplishments:**
+- Created `data/` directory with source-first hierarchy and canonical CSV schema (12 columns across 3 tiers)
+- Acquired 33,680 rows of real SPX and NDX option chain data via yfinance (47+ expiry slices each)
+- Documented per-file source provenance with Yahoo Finance column mapping table
+- Confirmed European exercise style for SPX and NDX with CBOE contract specification URLs
+- Created comprehensive data quality notes covering duplicate data, empty volumes, high IV values, and bid=0 handling
+
+**Stats:**
+- 23 files created/modified
+- 201 lines in data/README.md (data dictionary)
+- 3 phases, 3 plans, 9 tasks
+- 2 days from start to ship
+
+**What's next:** v1.3 Data Parsing (CSV parser, put-call parity forward extraction, CalibrationInput conversion)
+
+---
+
 ## v1.1 Pricing Primitives (Shipped: 2026-03-07)
 
 **Delivered:** Ported Black-76 pricing and Let's Be Rational implied volatility solver as independent library modules with full math foundations (erf, normal distributions, rational cubic interpolation).

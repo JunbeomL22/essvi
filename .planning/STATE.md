@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Market Data Collection
-status: verifying
-stopped_at: Phase 11 plan 01 complete, pending verification
-last_updated: "2026-03-07T06:17:50.494Z"
-last_activity: 2026-03-07 -- Phase 11 plan 01 executed
+status: complete
+stopped_at: null
+last_updated: "2026-03-07"
+last_activity: 2026-03-07 -- v1.2 milestone completed
 progress:
   total_phases: 3
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** Phase 11 - Provenance and Quality Documentation (executing)
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 11 of 11 (Provenance and Quality Documentation)
-Plan: 1 of 1 in current phase (complete)
-Status: Awaiting verification
-Last activity: 2026-03-07 -- Phase 11 plan 01 executed
+Phase: 11 of 11 (all milestones complete through v1.2)
+Plan: All complete
+Status: Milestone v1.2 shipped
+Last activity: 2026-03-07 -- v1.2 milestone completed
 
 Progress: [================] 100% (11/11 phases complete across all milestones)
 
@@ -57,12 +57,7 @@ Progress: [================] 100% (11/11 phases complete across all milestones)
 
 ### Decisions
 
-All v1.0 and v1.1 decisions recorded in PROJECT.md Key Decisions table.
-
-v1.2 decisions:
-- Used NDX (Nasdaq 100) as second index instead of Euro Stoxx 50 (Yahoo Finance limitation)
-- Yahoo Finance via yfinance as sole data source for option chains
-- Second SPX observation date created by duplication (acceptable for schema testing)
+All decisions recorded in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
@@ -75,5 +70,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Phase 11 plan 01 complete, pending verification
+Stopped at: v1.2 milestone complete, ready for next milestone
 Resume file: None

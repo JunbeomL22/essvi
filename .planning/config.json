@@ -6,7 +6,7 @@
   "phase_branch_template": "gsd/phase-{phase}-{slug}",
   "milestone_branch_template": "gsd/{milestone}-{slug}",
   "workflow": {
-    "research": false,
+    "research": true,
     "plan_check": true,
     "verifier": true,
     "nyquist_validation": true,
@@ -14,7 +14,7 @@
   },
   "parallelization": true,
   "brave_search": false,
-  "mode": "interactive",
+  "mode": "yolo",
   "git": {
     "branching_strategy": "none"
   },

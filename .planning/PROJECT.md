@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A pure Rust library for calibrating implied volatility surfaces using SVI-family parameterizations (SSVI and eSSVI). Provides Black-76 option pricing, machine-precision implied volatility recovery (Let's Be Rational), derivative-free optimization (bounded Nelder-Mead), implicit theta resolution (Brent root-finding), configurable calibration parameters, proper error types, and no-arbitrage enforcement. Organized into `math/`, `pricing/`, `solver/`, and `model/` submodules with all tests in `tests/`.
+A pure Rust library for calibrating implied volatility surfaces using SVI-family parameterizations (SSVI and eSSVI). Provides Black-76 option pricing, machine-precision implied volatility recovery (Let's Be Rational), derivative-free optimization (bounded Nelder-Mead), implicit theta resolution (Brent root-finding), configurable calibration parameters, proper error types, and no-arbitrage enforcement. Includes real market data (SPX and NDX option chains) for end-to-end pipeline testing. Organized into `math/`, `pricing/`, `solver/`, and `model/` submodules with all tests in `tests/`.
 
 ## Core Value
 
@@ -28,34 +28,28 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - ✓ Supporting math: Cody's erf/erfc/erfcx, normal distribution (standard + high-precision) — v1.1
 - ✓ Rational cubic interpolation utilities — v1.1
 - ✓ PricingError type and numerical constants — v1.1
+- ✓ Real option price data for European-style index options (SPX + NDX) — v1.2
+- ✓ `data/` directory with organized market data files and canonical CSV schema — v1.2
+- ✓ Source provenance, exercise style confirmation, and data quality documentation — v1.2
 
 ### Active
 
-- [ ] Real option price data for European-style index options (Euro Stoxx 50 / Nikkei 225, fallback SPX)
-- [ ] `data/` directory with organized market data files
-
-## Current Milestone: v1.2 Market Data Collection
-
-**Goal:** Collect and store real European-style index option price data for testing and validation.
-
-**Target features:**
-- `data/` directory for market data storage
-- Real option price data (Euro Stoxx 50 or Nikkei 225 preferred, SPX fallback)
-- At least 1 day of data, manually downloaded from reliable public sources
+(None — define in next milestone)
 
 ### Out of Scope
 
 - eSSVI model implementation — deferred to future milestone
 - Surface-level calibration improvements — future milestone
-- Real market data parsing — deferred (v1.2 is collection only, parsing in future milestone)
 - API ergonomics / crate publishing — future milestone
 - Async/parallel calibration — not needed for current use case
-- Integration with existing calibration pipeline — will be wired in a later milestone when input is option prices instead of IVs
+- Real-time data feeds — static snapshots sufficient for calibration
+- American-style option data — Black-76 and Let's Be Rational assume European exercise
 
 ## Context
 
-Shipped v1.1 with 4,663 LOC Rust. Tech stack: pure Rust, plotters for reporting.
+Shipped v1.2 with 4,663 LOC Rust + 33,680 rows of market data. Tech stack: pure Rust, plotters for reporting, yfinance (Python helper) for data acquisition.
 Module structure: `src/math/{erf,normal,normal_hp,constants}.rs`, `src/pricing/{black76,error,lets_be_rational,rational_cubic}.rs`, `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src/calibration.rs`, `src/fit_common.rs`.
+Data: `data/cboe/spx/` (2 dates), `data/cboe/ndx/` (1 date), canonical schema in `data/README.md`.
 111 tests (91 integration in `tests/`, 20 doc-tests), all passing.
 
 ## Constraints
@@ -83,6 +77,9 @@ Module structure: `src/math/{erf,normal,normal_hp,constants}.rs`, `src/pricing/{
 | Bisection + Halley for implied volatility | Robust initial bracket, machine-precision in 2 iterations | ✓ Good |
 | i32 q (+1/-1) convention over OptionType enum | Matches Let's Be Rational API directly, avoids unnecessary abstraction | ✓ Good |
 | PricingError with 3 variants | Covers all pricing failure modes (above max, below intrinsic, invalid input) | ✓ Good |
+| Source-first data hierarchy (data/{source}/{underlying}/) | Natural grouping by exchange/provider, easy to add new sources | ✓ Good |
+| Raw bid/ask prices over pre-computed IV | Tests full pipeline from market prices to calibration | ✓ Good |
+| NDX as second index (replacing Euro Stoxx 50) | Yahoo Finance lacks ^STOXX50E/^N225 option data; NDX is European-style on CBOE | ✓ Good |
 
 ---
-*Last updated: 2026-03-07 after v1.2 milestone start*
+*Last updated: 2026-03-07 after v1.2 milestone*
