@@ -9,14 +9,14 @@ Requirements for crude solver milestone. Each maps to roadmap phases.
 
 ### Solver Core
 
-- [ ] **CRUD-01**: CrudeCalibConfig struct with theta bounds, 4D Nelder-Mead config, lambda, and k_penalty grid settings
-- [ ] **CRUD-02**: Single-slice calibration via 4D Nelder-Mead over (theta, eta, gamma, rho) with SSE on total variance + no-arb penalty
+- [x] **CRUD-01**: CrudeCalibConfig struct with theta bounds, 4D Nelder-Mead config, lambda, and k_penalty grid settings
+- [x] **CRUD-02**: Single-slice calibration via 4D Nelder-Mead over (theta, eta, gamma, rho) with SSE on total variance + no-arb penalty
 - [x] **CRUD-03**: Sequential multi-slice calibration — sort by T, calibrate shortest first, penalize theta monotonicity violations via lambda * calendar spread penalty
 
 ### Binary
 
-- [ ] **BIN-01**: Binary that parses CSV market data and runs crude_solver on SPX/NDX option chains
-- [ ] **BIN-02**: SVG fit plots per slice showing model vs market total variance
+- [x] **BIN-01**: Binary that parses CSV market data and runs crude_solver on SPX/NDX option chains
+- [x] **BIN-02**: SVG fit plots per slice showing model vs market total variance
 
 ## Future Requirements
 
@@ -44,11 +44,11 @@ Requirements for crude solver milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CRUD-01 | Phase 12 | Pending |
-| CRUD-02 | Phase 12 | Pending |
+| CRUD-01 | Phase 12 | Complete |
+| CRUD-02 | Phase 12 | Complete |
 | CRUD-03 | Phase 13 | Complete |
-| BIN-01 | Phase 14 | Pending |
-| BIN-02 | Phase 14 | Pending |
+| BIN-01 | Phase 14 | Complete |
+| BIN-02 | Phase 14 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 5 total

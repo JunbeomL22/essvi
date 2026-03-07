@@ -5,7 +5,7 @@
 - v1.0 Idiomatic Restructuring - Phases 1-5 (shipped 2026-03-07)
 - v1.1 Pricing Primitives - Phases 6-8 (shipped 2026-03-07)
 - v1.2 Market Data Collection - Phases 9-11 (shipped 2026-03-07)
-- v1.3 Crude Solver - Phases 12-14 (in progress)
+- v1.3 Crude Solver - Phases 12-14 (shipped 2026-03-07)
 
 ## Phases
 
@@ -42,7 +42,7 @@
 
 - [x] **Phase 12: Crude Solver Core** - CrudeCalibConfig struct and single-slice 4D Nelder-Mead calibration (completed 2026-03-07)
 - [x] **Phase 13: Sequential Calibration** - Multi-slice sequential calibration with calendar spread penalty (completed 2026-03-07)
-- [ ] **Phase 14: Crude Solver Binary** - Binary to run crude_solver on real data with SVG fit plots
+- [x] **Phase 14: Crude Solver Binary** - Binary to run crude_solver on real data with SVG fit plots (completed 2026-03-07)
 
 ## Phase Details
 
@@ -76,7 +76,7 @@
   2. The binary outputs per-slice SVG plots showing model total variance vs market total variance across log-moneyness
   3. The binary prints per-slice fit summary (T, theta, eta, gamma, rho, SSE) to stdout
   4. The binary handles both SPX and NDX data without code changes (parameterized by path or argument)
-**Plans**: TBD
+**Plans**: 1 (completed 2026-03-07)
 
 ## Progress
 
@@ -95,4 +95,4 @@
 | 11. Provenance and Quality Documentation | v1.2 | 1/1 | Complete | 2026-03-07 |
 | 12. Crude Solver Core | 1/1 | Complete    | 2026-03-07 | - |
 | 13. Sequential Calibration | 1/1 | Complete    | 2026-03-07 | - |
-| 14. Crude Solver Binary | v1.3 | 0/? | Not started | - |
+| 14. Crude Solver Binary | v1.3 | 1/1 | Complete | 2026-03-07 |
