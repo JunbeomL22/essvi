@@ -15,8 +15,9 @@ data/
 
 | Directory | Source | Underlying | Exercise Style |
 |-----------|--------|------------|----------------|
-| `cboe/spx/` | CBOE DataShop | S&P 500 Index | European |
-| `eurex/sx5e/` | Eurex Exchange | Euro Stoxx 50 | European |
+| `cboe/spx/` | Yahoo Finance (^SPX) | S&P 500 Index | European |
+| `cboe/ndx/` | Yahoo Finance (^NDX) | Nasdaq 100 Index | European |
+| `eurex/sx5e/` | Eurex Exchange | Euro Stoxx 50 | European (no data yet) |
 | `sample/` | Hand-constructed | Synthetic test data | N/A |
 
 **Why source-first:** Different sources have different column formats, price conventions, and licensing terms. Grouping by source scopes format-specific handling per provider.

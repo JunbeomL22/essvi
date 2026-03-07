@@ -33,7 +33,7 @@
 **Milestone Goal:** Collect and store real European-style index option price data for testing and validation of the full calibration pipeline.
 
 - [ ] **Phase 9: Data Schema and Directory Structure** - Define canonical CSV schema and create source-first directory layout
-- [ ] **Phase 10: Data Acquisition** - Download real option chain data for at least 2 indices across multiple dates
+- [x] **Phase 10: Data Acquisition** - Download real option chain data for at least 2 indices across multiple dates (completed 2026-03-07)
 - [ ] **Phase 11: Provenance and Quality Documentation** - Document data sources, confirm exercise styles, and note quality issues
 
 ## Phase Details
@@ -94,5 +94,5 @@ Phases execute in numeric order: 9 -> 10 -> 11
 | 7. Black-76 Pricing | v1.1 | 1/1 | Complete | 2026-03-07 |
 | 8. Implied Volatility Solver | v1.1 | 1/1 | Complete | 2026-03-07 |
 | 9. Data Schema and Directory Structure | v1.2 | 0/1 | Not started | - |
-| 10. Data Acquisition | v1.2 | 0/1 | Not started | - |
+| 10. Data Acquisition | 1/1 | Complete   | 2026-03-07 | - |
 | 11. Provenance and Quality Documentation | v1.2 | 0/1 | Not started | - |
