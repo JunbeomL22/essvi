@@ -94,5 +94,5 @@
 | 10. Data Acquisition | v1.2 | 1/1 | Complete | 2026-03-07 |
 | 11. Provenance and Quality Documentation | v1.2 | 1/1 | Complete | 2026-03-07 |
 | 12. Crude Solver Core | 1/1 | Complete    | 2026-03-07 | - |
-| 13. Sequential Calibration | 1/1 | Complete   | 2026-03-07 | - |
+| 13. Sequential Calibration | 1/1 | Complete    | 2026-03-07 | - |
 | 14. Crude Solver Binary | v1.3 | 0/? | Not started | - |
