@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** Phase 5 - Test Migration
+**Current focus:** Milestone v1.0 complete
 
 ## Current Position
 
 Phase: 5 of 5 (Test Migration)
-Plan: 0 of 0 in current phase
-Status: Ready to plan
-Last activity: 2026-03-07 -- Phase 4 (Binary Deduplication) completed
+Plan: 1 of 1 in current phase
+Status: Complete
+Last activity: 2026-03-07 -- Phase 5 (Test Migration) completed
 
-Progress: [########..] 80%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~1 min
 - Total execution time: <1 hour
 
@@ -31,10 +31,11 @@ Progress: [########..] 80%
 | 2. Error Types and Impl Blocks | 1 | ~1 min | ~1 min |
 | 3. Calibration Config | 1 | ~1 min | ~1 min |
 | 4. Binary Deduplication | 1 | ~1 min | ~1 min |
+| 5. Test Migration | 1 | ~1 min | ~1 min |
 
 **Recent Trend:**
-- Last 5 plans: Phase 1 Plan 1 (complete), Phase 2 Plan 1 (complete), Phase 3 Plan 1 (complete), Phase 4 Plan 1 (complete)
-- Trend: on track
+- Last 5 plans: Phase 1 Plan 1 (complete), Phase 2 Plan 1 (complete), Phase 3 Plan 1 (complete), Phase 4 Plan 1 (complete), Phase 5 Plan 1 (complete)
+- Trend: milestone complete
 
 *Updated after each plan completion*
 
@@ -57,6 +58,7 @@ Recent decisions affecting current work:
 - [Phase 4]: Shared binary code placed in src/fit_common.rs as a library module (not src/bin/ directory module) because Cargo auto-discovers src/bin/*.rs as binary targets
 - [Phase 4]: FitResult uses a superset struct with calendar_violations and max_calendar_violation_bps defaulting to 0 for per-slice fits (avoids Option wrapping)
 - [Phase 4]: plot_fit accepts title as a &str parameter so each binary controls its own title format
+- [Phase 5]: All 12 inline tests migrated to 4 integration test files (tests/ssvi.rs, tests/calibration.rs, tests/nelder_mead.rs, tests/brent.rs); tests use public API imports instead of `use super::*`
 
 ### Pending Todos
 
@@ -69,5 +71,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Phase 4 complete, ready to plan Phase 5
+Stopped at: Milestone v1.0 complete -- all 5 phases done
 Resume file: None

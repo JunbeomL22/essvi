@@ -26,7 +26,7 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - [x] Impl blocks on domain structs (CalibrationResult, CalibrationInput, etc.)
 - [x] Proper error types (Result<T, CalibError> replacing Option<T>)
 - [x] Deduplicate binary code (shared SliceData, make_slice, FitResult, plot_fit)
-- [ ] Move all inline #[cfg(test)] blocks to tests/ directory
+- [x] Move all inline #[cfg(test)] blocks to tests/ directory
 
 ### Out of Scope
 

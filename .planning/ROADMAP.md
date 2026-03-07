@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Error Types and Impl Blocks** - Replace Option returns with Result<T, CalibError> and add methods to domain structs
 - [x] **Phase 3: Calibration Config** - Extract hardcoded constants into CalibrationConfig struct with Default impl
 - [x] **Phase 4: Binary Deduplication** - Extract shared code from fit_real binaries into a common module
-- [ ] **Phase 5: Test Migration** - Move all inline tests to tests/ directory and verify coverage
+- [x] **Phase 5: Test Migration** - Move all inline tests to tests/ directory and verify coverage
 
 ## Phase Details
 
@@ -125,7 +125,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. tests/ssvi.rs, tests/calibration.rs, tests/nelder_mead.rs, and tests/brent.rs exist and contain the migrated unit tests
   2. Zero #[cfg(test)] mod tests blocks remain in any src/ file
   3. `cargo test` passes all tests with the same pass/fail results as before migration
-**Plans**: TBD
+**Plans**: Completed (1 plan: migrate inline tests to tests/ directory, remove #[cfg(test)] blocks from src/)
+
+#### Plan 5.1: Migrate inline tests to tests/ directory
+
+**Steps:**
+1. Create `tests/ssvi.rs` with 3 tests (phi_basic, atm_total_variance, no_arb) using public imports from `essvi::model::ssvi`
+2. Create `tests/calibration.rs` with 5 tests (solve_theta_basic, solve_theta_nonzero_kstar, calibrate_recovers_parameters, calibrate_with_nonzero_kstar, no_arbitrage_enforced) plus shared `make_sample_slice()` helper, using public imports from `essvi::calibration` and `essvi::model::ssvi`
+3. Create `tests/nelder_mead.rs` with 2 tests (rosenbrock_2d, solution_on_boundary) using public imports from `essvi::solver::nelder_mead`
+4. Create `tests/brent.rs` with 2 tests (find_sqrt2, no_sign_change) using public imports from `essvi::solver::brent`
+5. Remove all `#[cfg(test)] mod tests` blocks from `src/model/ssvi.rs`, `src/calibration.rs`, `src/solver/nelder_mead.rs`, `src/solver/brent.rs`
+6. Run `cargo test` -- verify all 14 tests pass (12 migrated + 2 existing integration tests in steep_skew.rs)
 
 ## Progress
 
@@ -139,4 +149,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Error Types and Impl Blocks | 1/1 | Complete | 2026-03-07 |
 | 3. Calibration Config | 1/1 | Complete | 2026-03-07 |
 | 4. Binary Deduplication | 1/1 | Complete | 2026-03-07 |
-| 5. Test Migration | 0/0 | Not started | - |
+| 5. Test Migration | 1/1 | Complete | 2026-03-07 |

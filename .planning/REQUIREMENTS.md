@@ -35,12 +35,12 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 
 ### Testing
 
-- [ ] **TEST-01**: tests/ssvi.rs contains all SSVI model unit tests (phi_basic, atm_total_variance, no_arb)
-- [ ] **TEST-02**: tests/calibration.rs contains all calibration unit tests (solve_theta_basic, calibrate_recovers_parameters, etc.)
-- [ ] **TEST-03**: tests/nelder_mead.rs contains optimizer unit tests (rosenbrock_2d, solution_on_boundary)
-- [ ] **TEST-04**: tests/brent.rs contains root finder unit tests (find_sqrt2, no_sign_change)
-- [ ] **TEST-05**: All #[cfg(test)] mod tests blocks removed from src/ files
-- [ ] **TEST-06**: cargo test passes with identical coverage after migration
+- [x] **TEST-01**: tests/ssvi.rs contains all SSVI model unit tests (phi_basic, atm_total_variance, no_arb)
+- [x] **TEST-02**: tests/calibration.rs contains all calibration unit tests (solve_theta_basic, calibrate_recovers_parameters, etc.)
+- [x] **TEST-03**: tests/nelder_mead.rs contains optimizer unit tests (rosenbrock_2d, solution_on_boundary)
+- [x] **TEST-04**: tests/brent.rs contains root finder unit tests (find_sqrt2, no_sign_change)
+- [x] **TEST-05**: All #[cfg(test)] mod tests blocks removed from src/ files
+- [x] **TEST-06**: cargo test passes with identical coverage after migration
 
 ## Future Requirements
 
@@ -82,12 +82,12 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 | API-03 | Phase 2 | Done |
 | API-04 | Phase 2 | Done |
 | API-05 | Phase 2 | Done |
-| TEST-01 | Phase 5 | Pending |
-| TEST-02 | Phase 5 | Pending |
-| TEST-03 | Phase 5 | Pending |
-| TEST-04 | Phase 5 | Pending |
-| TEST-05 | Phase 5 | Pending |
-| TEST-06 | Phase 5 | Pending |
+| TEST-01 | Phase 5 | Done |
+| TEST-02 | Phase 5 | Done |
+| TEST-03 | Phase 5 | Done |
+| TEST-04 | Phase 5 | Done |
+| TEST-05 | Phase 5 | Done |
+| TEST-06 | Phase 5 | Done |
 
 **Coverage:**
 - v1 requirements: 23 total
