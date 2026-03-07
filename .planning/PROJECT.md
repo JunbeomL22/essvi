@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A pure Rust library for calibrating implied volatility surfaces using SVI-family parameterizations (SSVI and eSSVI). Provides derivative-free optimization (bounded Nelder-Mead), implicit theta resolution (Brent root-finding), and no-arbitrage enforcement. Targets quantitative finance practitioners who need fast, correct vol surface fitting with zero external dependencies.
+A pure Rust library for calibrating implied volatility surfaces using SVI-family parameterizations (SSVI and eSSVI). Provides derivative-free optimization (bounded Nelder-Mead), implicit theta resolution (Brent root-finding), configurable calibration parameters, proper error types, and no-arbitrage enforcement. Organized into `solver/` and `model/` submodules with all tests in `tests/`.
 
 ## Core Value
 
@@ -12,21 +12,21 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 ### Validated
 
-- SSVI model (phi function, total variance formula, no-arb check)
-- Bounded Nelder-Mead optimizer (2D/3D with projection)
-- Brent root finder for implicit theta solving
-- SSVI calibration pipeline (rho-grid sweep + 2D NM + 3D polish)
-- Benchmark report generator with SVG plots
-- Inline unit tests and integration stress tests
+- ✓ SSVI model (phi function, total variance formula, no-arb check) — v1.0
+- ✓ Bounded Nelder-Mead optimizer (2D/3D with projection) — v1.0
+- ✓ Brent root finder for implicit theta solving — v1.0
+- ✓ SSVI calibration pipeline (rho-grid sweep + 2D NM + 3D polish) — v1.0
+- ✓ Benchmark report generator with SVG plots — v1.0
+- ✓ CalibrationConfig struct (bounds, grid steps, tolerances) with Default impl — v1.0
+- ✓ Module restructuring (solver/, model/ submodules) — v1.0
+- ✓ Impl blocks on domain structs (CalibrationResult methods) — v1.0
+- ✓ Proper error types (Result<T, CalibError> replacing Option<T>) — v1.0
+- ✓ Deduplicated binary code (shared SliceData, make_slice, FitResult, plot_fit) — v1.0
+- ✓ External test directory mirroring src/ structure — v1.0
 
 ### Active
 
-- [x] CalibrationConfig struct (bounds, grid steps, tolerances, lambda) with Default impl
-- [x] Module restructuring (solver/, model/ submodules)
-- [x] Impl blocks on domain structs (CalibrationResult, CalibrationInput, etc.)
-- [x] Proper error types (Result<T, CalibError> replacing Option<T>)
-- [x] Deduplicate binary code (shared SliceData, make_slice, FitResult, plot_fit)
-- [x] Move all inline #[cfg(test)] blocks to tests/ directory
+(None — ready for next milestone)
 
 ### Out of Scope
 
@@ -34,13 +34,13 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - Surface-level calibration improvements — future milestone
 - Real market data parsing — future milestone
 - API ergonomics / crate publishing — future milestone
+- Async/parallel calibration — not needed for current use case
 
 ## Context
 
-- The current codebase works correctly but has structural debt: hardcoded numeric constants scattered across calibration functions, duplicated code between binaries, flat module structure, and inline tests mixed with production code.
-- All calibration bounds (eta: [1e-6, 2.0-1e-6], gamma: [1e-6, 1.0-1e-6], rho: [-0.999, 0.999]), grid parameters (n_rho=20, rho sweep -0.95 to 0.95), and penalty config (k_penalty: -0.5 to 0.5 step 0.05, lambda=100) are hardcoded.
-- fit_real.rs and fit_real_surface.rs share ~150 lines of identical code (SliceData, make_slice, build_market_slices, FitResult, plot_fit).
-- Error handling uses Option<T> throughout the library — no way to distinguish failure modes.
+Shipped v1.0 with 2,284 LOC Rust. Tech stack: pure Rust, plotters for reporting.
+Module structure: `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src/calibration.rs`, `src/fit_common.rs`.
+14 tests (12 unit in `tests/`, 2 integration in `tests/steep_skew.rs`), all passing.
 
 ## Constraints
 
@@ -52,23 +52,15 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Bounded Nelder-Mead over L-BFGS-B | Only 3 vars, avoids external C deps | Good |
-| Eliminate equality constraint via implicit theta | Simpler solver, better convergence | Good |
-| Single CalibrationConfig struct | Keeps API surface small, one place for all tuning knobs | — Pending |
-| Result<T, CalibError> over Option<T> | Enables callers to distinguish and handle failure modes | Good |
-| Reorganize into solver/ and model/ submodules | Clearer separation of concerns as library grows | Good |
-
-## Current Milestone: v1.0 Idiomatic Restructuring
-
-**Goal:** Make the library structurally clean, configurable, and idiomatic Rust — removing hardcoded values, adding proper error types, restructuring modules, and separating tests.
-
-**Target features:**
-- CalibrationConfig struct with Default impl
-- Module hierarchy (solver/, model/)
-- Impl blocks on all domain structs
-- Proper error types with CalibError
-- Deduplicated binary code
-- External test directory mirroring src/ structure
+| Bounded Nelder-Mead over L-BFGS-B | Only 3 vars, avoids external C deps | ✓ Good |
+| Eliminate equality constraint via implicit theta | Simpler solver, better convergence | ✓ Good |
+| Single CalibrationConfig struct | Keeps API surface small, one place for all tuning knobs | ✓ Good |
+| Result<T, CalibError> over Option<T> | Enables callers to distinguish and handle failure modes | ✓ Good |
+| Reorganize into solver/ and model/ submodules | Clearer separation of concerns as library grows | ✓ Good |
+| CalibError with 4 variants (NonPositiveTheta, ZeroDerivative, ThetaDivergence, NonConvergence) | Covers all calibration failure modes without over-granularity | ✓ Good |
+| k_penalty/lambda as direct params, not in CalibrationConfig | Surface-level concerns, not per-slice calibration knobs | ✓ Good |
+| Shared binary code in src/fit_common.rs (library module) | Cargo auto-discovers src/bin/*.rs as binaries; library module is idiomatic | ✓ Good |
+| FitResult superset struct with default 0 for calendar fields | Avoids Option wrapping, keeps struct simple | ✓ Good |
 
 ---
-*Last updated: 2026-03-07 after milestone v1.0 initialization*
+*Last updated: 2026-03-07 after v1.0 milestone*
