@@ -11,7 +11,7 @@ Requirements for crude solver milestone. Each maps to roadmap phases.
 
 - [ ] **CRUD-01**: CrudeCalibConfig struct with theta bounds, 4D Nelder-Mead config, lambda, and k_penalty grid settings
 - [ ] **CRUD-02**: Single-slice calibration via 4D Nelder-Mead over (theta, eta, gamma, rho) with SSE on total variance + no-arb penalty
-- [ ] **CRUD-03**: Sequential multi-slice calibration — sort by T, calibrate shortest first, penalize theta monotonicity violations via lambda * calendar spread penalty
+- [x] **CRUD-03**: Sequential multi-slice calibration — sort by T, calibrate shortest first, penalize theta monotonicity violations via lambda * calendar spread penalty
 
 ### Binary
 
@@ -46,7 +46,7 @@ Requirements for crude solver milestone. Each maps to roadmap phases.
 |-------------|-------|--------|
 | CRUD-01 | Phase 12 | Pending |
 | CRUD-02 | Phase 12 | Pending |
-| CRUD-03 | Phase 13 | Pending |
+| CRUD-03 | Phase 13 | Complete |
 | BIN-01 | Phase 14 | Pending |
 | BIN-02 | Phase 14 | Pending |
 

@@ -6,11 +6,17 @@
   "phase_branch_template": "gsd/phase-{phase}-{slug}",
   "milestone_branch_template": "gsd/{milestone}-{slug}",
   "workflow": {
-    "research": true,
+    "research": false,
     "plan_check": true,
     "verifier": true,
     "nyquist_validation": true,
-    "auto_advance": false
+    "auto_advance": true,
+    "yolo": {
+      "active": true,
+      "start_phase": "12",
+      "timestamp": "2026-03-07T13:00:53.454Z"
+    },
+    "_auto_chain_active": true
   },
   "parallelization": true,
   "brave_search": false,
