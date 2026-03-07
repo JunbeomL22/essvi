@@ -54,7 +54,7 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 
 | Feature | Reason |
 |---------|--------|
-| eSSVI implementation | Deferred to next milestone — structural cleanup first |
+| eSSVI implementation | Deferred to next milestone -- structural cleanup first |
 | Surface calibration improvements | Future milestone |
 | Real market data parsing | Future milestone |
 | Crate publishing / API docs | Future milestone |
@@ -65,35 +65,35 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| CONF-03 | — | Pending |
-| CONF-04 | — | Pending |
-| CONF-05 | — | Pending |
-| CONF-06 | — | Pending |
-| STRC-01 | — | Pending |
-| STRC-02 | — | Pending |
-| STRC-03 | — | Pending |
-| STRC-04 | — | Pending |
-| STRC-05 | — | Pending |
-| STRC-06 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
+| CONF-01 | Phase 3 | Pending |
+| CONF-02 | Phase 3 | Pending |
+| CONF-03 | Phase 3 | Pending |
+| CONF-04 | Phase 3 | Pending |
+| CONF-05 | Phase 3 | Pending |
+| CONF-06 | Phase 3 | Pending |
+| STRC-01 | Phase 1 | Pending |
+| STRC-02 | Phase 1 | Pending |
+| STRC-03 | Phase 1 | Pending |
+| STRC-04 | Phase 1 | Pending |
+| STRC-05 | Phase 4 | Pending |
+| STRC-06 | Phase 4 | Pending |
+| API-01 | Phase 2 | Pending |
+| API-02 | Phase 2 | Pending |
+| API-03 | Phase 2 | Pending |
+| API-04 | Phase 2 | Pending |
+| API-05 | Phase 2 | Pending |
+| TEST-01 | Phase 5 | Pending |
+| TEST-02 | Phase 5 | Pending |
+| TEST-03 | Phase 5 | Pending |
+| TEST-04 | Phase 5 | Pending |
+| TEST-05 | Phase 5 | Pending |
+| TEST-06 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-07 after roadmap creation*
