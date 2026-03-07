@@ -12,7 +12,7 @@ Transform the essvi library from a working-but-rough codebase into idiomatic Rus
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Module Restructuring** - Move source files into solver/ and model/ submodule hierarchy
+- [x] **Phase 1: Module Restructuring** - Move source files into solver/ and model/ submodule hierarchy
 - [ ] **Phase 2: Error Types and Impl Blocks** - Replace Option returns with Result<T, CalibError> and add methods to domain structs
 - [ ] **Phase 3: Calibration Config** - Extract hardcoded constants into CalibrationConfig struct with Default impl
 - [ ] **Phase 4: Binary Deduplication** - Extract shared code from fit_real binaries into a common module
@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `use essvi::model::ssvi` resolves correctly
   3. `cargo build` succeeds with zero warnings about the module restructuring
   4. All three binaries (report, fit_real, fit_real_surface) compile and run against the new module paths
-**Plans**: TBD
+**Plans**: Completed (1 plan: move files, create mod.rs, update imports, add re-exports)
 
 ### Phase 2: Error Types and Impl Blocks
 **Goal**: Callers can distinguish failure modes via CalibError variants and access convenience methods on CalibrationResult
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Module Restructuring | 0/0 | Not started | - |
+| 1. Module Restructuring | 1/1 | Complete | 2026-03-07 |
 | 2. Error Types and Impl Blocks | 0/0 | Not started | - |
 | 3. Calibration Config | 0/0 | Not started | - |
 | 4. Binary Deduplication | 0/0 | Not started | - |

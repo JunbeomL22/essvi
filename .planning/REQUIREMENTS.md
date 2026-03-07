@@ -18,10 +18,10 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 
 ### Structure
 
-- [ ] **STRC-01**: Nelder-Mead optimizer lives at src/solver/nelder_mead.rs
-- [ ] **STRC-02**: Brent root finder lives at src/solver/brent.rs
-- [ ] **STRC-03**: SSVI model lives at src/model/ssvi.rs
-- [ ] **STRC-04**: src/solver/mod.rs and src/model/mod.rs re-export public items
+- [x] **STRC-01**: Nelder-Mead optimizer lives at src/solver/nelder_mead.rs
+- [x] **STRC-02**: Brent root finder lives at src/solver/brent.rs
+- [x] **STRC-03**: SSVI model lives at src/model/ssvi.rs
+- [x] **STRC-04**: src/solver/mod.rs and src/model/mod.rs re-export public items
 - [ ] **STRC-05**: Shared binary code extracted to common module (SliceData, make_slice, build_market_slices, FitResult, plot_fit)
 - [ ] **STRC-06**: fit_real.rs and fit_real_surface.rs import from shared module instead of duplicating
 
@@ -71,10 +71,10 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 | CONF-04 | Phase 3 | Pending |
 | CONF-05 | Phase 3 | Pending |
 | CONF-06 | Phase 3 | Pending |
-| STRC-01 | Phase 1 | Pending |
-| STRC-02 | Phase 1 | Pending |
-| STRC-03 | Phase 1 | Pending |
-| STRC-04 | Phase 1 | Pending |
+| STRC-01 | Phase 1 | Done |
+| STRC-02 | Phase 1 | Done |
+| STRC-03 | Phase 1 | Done |
+| STRC-04 | Phase 1 | Done |
 | STRC-05 | Phase 4 | Pending |
 | STRC-06 | Phase 4 | Pending |
 | API-01 | Phase 2 | Pending |

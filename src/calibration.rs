@@ -1,7 +1,7 @@
 /// SSVI calibration: solve θ implicitly, then minimize ||W - tv||².
 
-use crate::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMeadResult};
-use crate::ssvi;
+use crate::solver::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMeadResult};
+use crate::model::ssvi;
 
 /// Solve θ from the ATM consistency equation w(k*, θ) = θ*
 /// using Newton's method with initial guess θ₀ = θ*.
