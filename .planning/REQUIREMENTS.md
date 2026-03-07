@@ -50,26 +50,26 @@ Requirements for Pricing Primitives milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATH-01 | — | Pending |
-| MATH-02 | — | Pending |
-| MATH-03 | — | Pending |
-| MATH-04 | — | Pending |
-| MATH-05 | — | Pending |
-| BLK-01 | — | Pending |
-| BLK-02 | — | Pending |
-| BLK-03 | — | Pending |
-| BLK-04 | — | Pending |
-| BLK-05 | — | Pending |
-| IVOL-01 | — | Pending |
-| IVOL-02 | — | Pending |
-| IVOL-03 | — | Pending |
-| IVOL-04 | — | Pending |
+| MATH-01 | Phase 6 | Pending |
+| MATH-02 | Phase 6 | Pending |
+| MATH-03 | Phase 6 | Pending |
+| MATH-04 | Phase 8 | Pending |
+| MATH-05 | Phase 6 | Pending |
+| BLK-01 | Phase 7 | Pending |
+| BLK-02 | Phase 7 | Pending |
+| BLK-03 | Phase 7 | Pending |
+| BLK-04 | Phase 7 | Pending |
+| BLK-05 | Phase 7 | Pending |
+| IVOL-01 | Phase 8 | Pending |
+| IVOL-02 | Phase 8 | Pending |
+| IVOL-03 | Phase 8 | Pending |
+| IVOL-04 | Phase 8 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-07 after roadmap creation*
