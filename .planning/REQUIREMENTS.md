@@ -30,7 +30,7 @@ Requirements for v1.4 Direct Solver. Each maps to roadmap phases.
 
 - [x] **CRUD-01**: CrudeCalibConfig struct with theta bounds, 4D Nelder-Mead config, lambda, and k_penalty grid settings
 - [x] **CRUD-02**: Single-slice calibration via 4D Nelder-Mead over (theta, eta, gamma, rho) with SSE on total variance + no-arb penalty
-- [x] **CRUD-03**: Sequential multi-slice calibration — sort by T, calibrate shortest first, penalize theta monotonicity violations
+- [x] **CRUD-03**: Sequential multi-slice calibration -- sort by T, calibrate shortest first, penalize theta monotonicity violations
 - [x] **BIN-01**: Binary that parses CSV market data and runs crude_solver on SPX/NDX option chains
 - [x] **BIN-02**: SVG fit plots per slice showing model vs market total variance
 
@@ -65,19 +65,19 @@ Requirements for v1.4 Direct Solver. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SOLV-01 | TBD | Pending |
-| SOLV-02 | TBD | Pending |
-| SOLV-03 | TBD | Pending |
-| CAL-01 | TBD | Pending |
-| VAL-01 | TBD | Pending |
-| BIN-01 | TBD | Pending |
-| BIN-02 | TBD | Pending |
+| SOLV-01 | Phase 15 | Pending |
+| SOLV-02 | Phase 15 | Pending |
+| SOLV-03 | Phase 15 | Pending |
+| VAL-01 | Phase 15 | Pending |
+| CAL-01 | Phase 16 | Pending |
+| BIN-01 | Phase 17 | Pending |
+| BIN-02 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.4 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7
+- Mapped to phases: 7
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 after roadmap creation*
