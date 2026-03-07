@@ -22,7 +22,7 @@
 
 - [x] **Phase 6: Math Foundations** - Error functions, normal distributions, and numerical constants
 - [x] **Phase 7: Black-76 Pricing** - Undiscounted/discounted pricing, greeks, and PricingError type
-- [ ] **Phase 8: Implied Volatility Solver** - Let's Be Rational algorithm with rational cubic initial guesses
+- [x] **Phase 8: Implied Volatility Solver** - Let's Be Rational algorithm with rational cubic initial guesses
 
 ## Phase Details
 
@@ -64,11 +64,10 @@ Plans:
   3. Rational cubic interpolation produces accurate initial guesses that the Householder iterations refine
   4. Algorithm converges to machine-precision implied volatility in at most 2 Householder iterations
   5. Edge cases (deep ITM, deep OTM, at-the-money) return correct results without numerical blowup
-**Plans**: TBD
+**Plans**: 1/1
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [x] 08-01: Implement implied volatility solver with bisection + Halley - completed 2026-03-07
 
 ## Progress
 
@@ -84,4 +83,4 @@ Phases execute in numeric order: 6 -> 7 -> 8
 | 5. Test Migration | v1.0 | 1/1 | Complete | 2026-03-07 |
 | 6. Math Foundations | v1.1 | 1/1 | Complete | 2026-03-07 |
 | 7. Black-76 Pricing | v1.1 | 1/1 | Complete | 2026-03-07 |
-| 8. Implied Volatility Solver | v1.1 | 0/? | Not started | - |
+| 8. Implied Volatility Solver | v1.1 | 1/1 | Complete | 2026-03-07 |

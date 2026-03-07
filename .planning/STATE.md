@@ -5,9 +5,9 @@ milestone_name: Pricing Primitives
 status: active
 stopped_at: null
 last_updated: "2026-03-07"
-last_activity: 2026-03-07 -- Phase 7 Black-76 Pricing completed
+last_activity: 2026-03-07 -- Phase 8 Implied Volatility Solver completed; v1.1 milestone complete
 progress:
-  percent: 67
+  percent: 100
 ---
 
 # Project State
@@ -17,16 +17,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** v1.1 Pricing Primitives - Phase 8 (Implied Volatility Solver)
+**Current focus:** v1.1 Pricing Primitives - Complete
 
 ## Current Position
 
-Phase: 8 of 8 (Implied Volatility Solver)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-07 -- Phase 7 Black-76 Pricing completed (1/1 plans)
+Phase: 8 of 8 (all phases complete)
+Plan: 1/1 in current phase
+Status: Milestone complete
+Last activity: 2026-03-07 -- All v1.1 phases (6-8) completed
 
-Progress: [######....] 67%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -65,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Phase 7 completed, ready for Phase 8
+Stopped at: v1.1 milestone complete (all 14 requirements satisfied)
 Resume file: None

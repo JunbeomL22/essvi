@@ -12,7 +12,7 @@ Requirements for Pricing Primitives milestone. Each maps to roadmap phases.
 - [x] **MATH-01**: Library provides Cody's erf/erfc/erfcx with rational Chebyshev approximations
 - [x] **MATH-02**: Library provides standard-precision normal distribution (PDF, CDF, inverse CDF)
 - [x] **MATH-03**: Library provides high-precision normal distribution (PDF, CDF with asymptotic expansion, inverse CDF)
-- [ ] **MATH-04**: Library provides rational cubic interpolation for initial guess refinement
+- [x] **MATH-04**: Library provides rational cubic interpolation for initial guess refinement
 - [x] **MATH-05**: Library provides numerical constants module (machine epsilon, algorithm thresholds)
 
 ### Black-76 Pricing
@@ -25,10 +25,10 @@ Requirements for Pricing Primitives milestone. Each maps to roadmap phases.
 
 ### Implied Volatility
 
-- [ ] **IVOL-01**: User can compute Black implied volatility from option price (main entry point)
-- [ ] **IVOL-02**: User can compute normalised implied volatility from normalised price
-- [ ] **IVOL-03**: Library provides normalised Black call and normalised vega functions
-- [ ] **IVOL-04**: Algorithm achieves machine-precision in 2 Householder iterations
+- [x] **IVOL-01**: User can compute Black implied volatility from option price (main entry point)
+- [x] **IVOL-02**: User can compute normalised implied volatility from normalised price
+- [x] **IVOL-03**: Library provides normalised Black call and normalised vega functions
+- [x] **IVOL-04**: Algorithm achieves machine-precision in 2 Halley iterations
 
 ## Future Requirements
 
@@ -53,17 +53,17 @@ Requirements for Pricing Primitives milestone. Each maps to roadmap phases.
 | MATH-01 | Phase 6 | Done |
 | MATH-02 | Phase 6 | Done |
 | MATH-03 | Phase 6 | Done |
-| MATH-04 | Phase 8 | Pending |
+| MATH-04 | Phase 8 | Done |
 | MATH-05 | Phase 6 | Done |
 | BLK-01 | Phase 7 | Done |
 | BLK-02 | Phase 7 | Done |
 | BLK-03 | Phase 7 | Done |
 | BLK-04 | Phase 7 | Done |
 | BLK-05 | Phase 7 | Done |
-| IVOL-01 | Phase 8 | Pending |
-| IVOL-02 | Phase 8 | Pending |
-| IVOL-03 | Phase 8 | Pending |
-| IVOL-04 | Phase 8 | Pending |
+| IVOL-01 | Phase 8 | Done |
+| IVOL-02 | Phase 8 | Done |
+| IVOL-03 | Phase 8 | Done |
+| IVOL-04 | Phase 8 | Done |
 
 **Coverage:**
 - v1.1 requirements: 14 total
