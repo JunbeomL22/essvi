@@ -23,6 +23,9 @@ pub const SIXTEENTH_ROOT_DBL_EPSILON: f64 = 1.0510814151985718e-1;
 /// Smallest positive normal f64 (2^-1022).
 pub const DBL_MIN: f64 = f64::MIN_POSITIVE; // 2.2250738585072014e-308
 
+/// Square root of smallest positive normal f64.
+pub const SQRT_DBL_MIN: f64 = 1.4916681462400413e-154;
+
 /// Largest finite f64.
 pub const DBL_MAX: f64 = f64::MAX; // 1.7976931348623158e+308
 
