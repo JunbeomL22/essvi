@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Market Data Collection
-status: complete
+milestone: v1.3
+milestone_name: Crude Solver
+status: active
 stopped_at: null
 last_updated: "2026-03-07"
-last_activity: 2026-03-07 -- v1.2 milestone completed
+last_activity: 2026-03-07 -- Milestone v1.3 started
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.3 Crude Solver
 
 ## Current Position
 
-Phase: 11 of 11 (all milestones complete through v1.2)
-Plan: All complete
-Status: Milestone v1.2 shipped
-Last activity: 2026-03-07 -- v1.2 milestone completed
-
-Progress: [================] 100% (11/11 phases complete across all milestones)
+Phase: Not started (defining requirements)
+Plan: --
+Status: Defining requirements
+Last activity: 2026-03-07 -- Milestone v1.3 started
 
 ## Performance Metrics
 
@@ -70,5 +68,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: v1.2 milestone complete, ready for next milestone
+Stopped at: Defining requirements for v1.3
 Resume file: None
