@@ -2,8 +2,7 @@
 ///
 /// Scenario: T near zero, ATM vol = 0.4, vol at k=0.7 reaches 0.7.
 /// This produces a very steep smile — does SSVI fit it well?
-
-use essvi::calibration::{calibrate, CalibrationConfig, CalibrationInput};
+use essvi::calibration::{CalibrationConfig, CalibrationInput, calibrate};
 use essvi::ssvi;
 
 /// Build synthetic market data for a steep-skew short-expiry slice.
@@ -49,9 +48,11 @@ fn run_calibration(label: &str, t_expiry: f64) {
     println!("  {} (T = {})", label, t_expiry);
     println!("==========================================================");
     println!("  theta_star (ATM w) = {:.6e}", theta_star);
-    println!("  w range: [{:.6e}, {:.6e}]",
+    println!(
+        "  w range: [{:.6e}, {:.6e}]",
         w_market.iter().cloned().fold(f64::INFINITY, f64::min),
-        w_market.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+        w_market.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+    );
 
     let input = CalibrationInput {
         k_slice: &k_slice,
@@ -79,14 +80,19 @@ fn run_calibration(label: &str, t_expiry: f64) {
 
             // Pointwise errors
             let w_fit = ssvi::total_variance_slice(&k_slice, r.theta, r.eta, r.gamma, r.rho);
-            let errors: Vec<f64> = w_fit.iter().zip(w_market.iter())
+            let errors: Vec<f64> = w_fit
+                .iter()
+                .zip(w_market.iter())
                 .map(|(m, w)| m - w)
                 .collect();
             let max_abs = errors.iter().map(|e| e.abs()).fold(0.0_f64, f64::max);
             let rmse = (errors.iter().map(|e| e * e).sum::<f64>() / errors.len() as f64).sqrt();
 
             // Convert errors to implied vol terms for interpretability
-            let iv_errors: Vec<f64> = w_fit.iter().zip(w_market.iter()).zip(k_slice.iter())
+            let iv_errors: Vec<f64> = w_fit
+                .iter()
+                .zip(w_market.iter())
+                .zip(k_slice.iter())
                 .map(|((wf, wm), _k)| {
                     let sigma_fit = (wf / t_expiry).sqrt();
                     let sigma_mkt = (wm / t_expiry).sqrt();
@@ -98,17 +104,27 @@ fn run_calibration(label: &str, t_expiry: f64) {
             println!("\n  Fit quality:");
             println!("    max |w_err|   = {:.6e}", max_abs);
             println!("    RMSE(w)       = {:.6e}", rmse);
-            println!("    max |iv_err|  = {:.4} vol pts ({:.2} bps)",
-                max_iv_err, max_iv_err * 10000.0);
+            println!(
+                "    max |iv_err|  = {:.4} vol pts ({:.2} bps)",
+                max_iv_err,
+                max_iv_err * 10000.0
+            );
 
-            println!("\n  {:>8} {:>10} {:>10} {:>10} {:>10}",
-                "k", "iv_mkt", "iv_fit", "iv_err", "w_err");
+            println!(
+                "\n  {:>8} {:>10} {:>10} {:>10} {:>10}",
+                "k", "iv_mkt", "iv_fit", "iv_err", "w_err"
+            );
             for i in 0..k_slice.len() {
                 let sigma_mkt = (w_market[i] / t_expiry).sqrt();
                 let sigma_fit = (w_fit[i] / t_expiry).sqrt();
-                println!("  {:>8.4} {:>10.6} {:>10.6} {:>+10.6} {:>+10.2e}",
-                    k_slice[i], sigma_mkt, sigma_fit,
-                    sigma_fit - sigma_mkt, errors[i]);
+                println!(
+                    "  {:>8.4} {:>10.6} {:>10.6} {:>+10.6} {:>+10.2e}",
+                    k_slice[i],
+                    sigma_mkt,
+                    sigma_fit,
+                    sigma_fit - sigma_mkt,
+                    errors[i]
+                );
             }
         }
         Err(e) => {
@@ -149,13 +165,19 @@ fn steep_skew_fit_quality() {
         let w_fit = ssvi::total_variance_slice(&k_slice, r.theta, r.eta, r.gamma, r.rho);
 
         // Max IV error in vol points
-        let max_iv_err: f64 = w_fit.iter().zip(w_market.iter())
-            .map(|(wf, wm)| {
-                ((wf / t).sqrt() - (wm / t).sqrt()).abs()
-            })
+        let max_iv_err: f64 = w_fit
+            .iter()
+            .zip(w_market.iter())
+            .map(|(wf, wm)| ((wf / t).sqrt() - (wm / t).sqrt()).abs())
             .fold(0.0_f64, f64::max);
 
-        println!("T={:.4}: max_iv_err = {:.4} ({:.1} bps), SSE = {:.2e}, converged={}",
-            t, max_iv_err, max_iv_err * 10000.0, r.optimizer.f, r.optimizer.converged);
+        println!(
+            "T={:.4}: max_iv_err = {:.4} ({:.1} bps), SSE = {:.2e}, converged={}",
+            t,
+            max_iv_err,
+            max_iv_err * 10000.0,
+            r.optimizer.f,
+            r.optimizer.converged
+        );
     }
 }

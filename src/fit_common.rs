@@ -3,7 +3,6 @@
 /// Contains the synthetic market data generators (SliceData, make_slice,
 /// build_market_slices), the FitResult struct that both binaries populate,
 /// and the plot_fit SVG renderer.
-
 use crate::model::ssvi;
 use plotters::prelude::*;
 
@@ -157,13 +156,14 @@ pub fn plot_fit(r: &FitResult, path: &str, title: &str) -> Result<(), Box<dyn st
         .draw()?;
 
     // Market data points
-    chart.draw_series(
-        r.k.iter()
-            .zip(r.iv_market.iter())
-            .map(|(&k, &iv)| Circle::new((k, iv), 3, BLACK.filled())),
-    )?
-    .label("Market")
-    .legend(|(x, y)| Circle::new((x + 10, y), 3, BLACK.filled()));
+    chart
+        .draw_series(
+            r.k.iter()
+                .zip(r.iv_market.iter())
+                .map(|(&k, &iv)| Circle::new((k, iv), 3, BLACK.filled())),
+        )?
+        .label("Market")
+        .legend(|(x, y)| Circle::new((x + 10, y), 3, BLACK.filled()));
 
     // SSVI fit curve (dense)
     let n_dense = 200;
@@ -175,12 +175,13 @@ pub fn plot_fit(r: &FitResult, path: &str, title: &str) -> Result<(), Box<dyn st
         .map(|&w| (w / r.t_expiry).max(0.0).sqrt())
         .collect();
 
-    chart.draw_series(LineSeries::new(
-        dense_k.iter().zip(dense_iv.iter()).map(|(&k, &iv)| (k, iv)),
-        RED.stroke_width(2),
-    ))?
-    .label("SSVI Fit")
-    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED.stroke_width(2)));
+    chart
+        .draw_series(LineSeries::new(
+            dense_k.iter().zip(dense_iv.iter()).map(|(&k, &iv)| (k, iv)),
+            RED.stroke_width(2),
+        ))?
+        .label("SSVI Fit")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED.stroke_width(2)));
 
     chart
         .configure_series_labels()

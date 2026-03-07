@@ -1,8 +1,5 @@
 /// SSVI calibration unit tests (migrated from src/calibration.rs).
-
-use essvi::calibration::{
-    calibrate, solve_theta, CalibrationConfig, CalibrationInput,
-};
+use essvi::calibration::{CalibrationConfig, CalibrationInput, calibrate, solve_theta};
 use essvi::model::ssvi;
 
 /// Generate a synthetic 20-point smile slice from known SSVI parameters,
@@ -21,8 +18,7 @@ fn make_sample_slice() -> (Vec<f64>, Vec<f64>, f64, f64) {
 
     // 20 log-moneyness points from -0.5 to +0.5
     let k_slice: Vec<f64> = (0..20).map(|i| -0.5 + (i as f64) / 19.0).collect();
-    let w_market =
-        ssvi::total_variance_slice(&k_slice, true_theta, true_eta, true_gamma, true_rho);
+    let w_market = ssvi::total_variance_slice(&k_slice, true_theta, true_eta, true_gamma, true_rho);
 
     (k_slice, w_market, theta_star, k_star)
 }
@@ -113,8 +109,7 @@ fn calibrate_with_nonzero_kstar() {
         .expect("true theta must solve");
 
     let k_slice: Vec<f64> = (0..20).map(|i| -0.4 + (i as f64) * 0.04).collect();
-    let w_market =
-        ssvi::total_variance_slice(&k_slice, true_theta, true_eta, true_gamma, true_rho);
+    let w_market = ssvi::total_variance_slice(&k_slice, true_theta, true_eta, true_gamma, true_rho);
 
     let input = CalibrationInput {
         k_slice: &k_slice,
@@ -127,11 +122,7 @@ fn calibrate_with_nonzero_kstar() {
     let res = calibrate(&input, &config).expect("calibration must succeed");
 
     assert!(res.optimizer.converged);
-    assert!(
-        res.optimizer.f < 1e-18,
-        "residual: {}",
-        res.optimizer.f
-    );
+    assert!(res.optimizer.f < 1e-18, "residual: {}", res.optimizer.f);
 }
 
 #[test]

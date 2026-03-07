@@ -1,7 +1,6 @@
-/// SSVI calibration: solve θ implicitly, then minimize ||W - tv||².
-
-use crate::solver::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMeadResult};
 use crate::model::ssvi;
+/// SSVI calibration: solve θ implicitly, then minimize ||W - tv||².
+use crate::solver::nelder_mead::{NelderMeadConfig, NelderMeadResult, nelder_mead_bounded};
 use std::fmt;
 
 /// Configuration for the SSVI calibration pipeline.
@@ -86,8 +85,12 @@ pub enum CalibError {
 impl fmt::Display for CalibError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CalibError::NonPositiveTheta => write!(f, "theta went non-positive during Newton iteration"),
-            CalibError::ZeroDerivative => write!(f, "zero derivative encountered during theta solve"),
+            CalibError::NonPositiveTheta => {
+                write!(f, "theta went non-positive during Newton iteration")
+            }
+            CalibError::ZeroDerivative => {
+                write!(f, "zero derivative encountered during theta solve")
+            }
             CalibError::ThetaDivergence => write!(f, "theta solve did not converge"),
             CalibError::NonConvergence => write!(f, "calibration optimizer did not converge"),
         }
@@ -140,8 +143,7 @@ pub fn solve_theta(
 
         // ∂w/∂θ
         let dw = w / theta
-            - (gamma + theta) * phi * k_star / (2.0 * (1.0 + theta))
-                * (rho + (pk + rho) / s);
+            - (gamma + theta) * phi * k_star / (2.0 * (1.0 + theta)) * (rho + (pk + rho) / s);
 
         if dw.abs() < 1e-30 {
             return Err(CalibError::ZeroDerivative);
@@ -221,7 +223,10 @@ impl CalibrationResult {
 /// Uses ρ-grid sweep + 2D Nelder-Mead on (η, γ) to avoid local minima,
 /// as recommended for SSVI calibration. The equality constraint (ATM
 /// consistency) is eliminated by solving θ implicitly inside the objective.
-pub fn calibrate(input: &CalibrationInput, config: &CalibrationConfig) -> Result<CalibrationResult, CalibError> {
+pub fn calibrate(
+    input: &CalibrationInput,
+    config: &CalibrationConfig,
+) -> Result<CalibrationResult, CalibError> {
     let lb_eg = [config.eta_lower, config.gamma_lower];
     let ub_eg = [config.eta_upper, config.gamma_upper];
 
@@ -251,7 +256,13 @@ pub fn calibrate(input: &CalibrationInput, config: &CalibrationConfig) -> Result
             weighted_squared_error(&w_model, input.w_market, input.weights)
         };
 
-        let res = nelder_mead_bounded(objective_2d, &[0.5, 0.5], &lb_eg, &ub_eg, &config.nelder_mead);
+        let res = nelder_mead_bounded(
+            objective_2d,
+            &[0.5, 0.5],
+            &lb_eg,
+            &ub_eg,
+            &config.nelder_mead,
+        );
         if res.f < best_f {
             best_f = res.f;
             best_x = [res.x[0], res.x[1], rho];
@@ -306,13 +317,23 @@ pub struct PrevSlice {
 
 /// Calendar arbitrage penalty: sum of max(0, w_prev(k) - w_cur(k))^2
 /// evaluated at the given penalty sample points.
-fn calendar_penalty(prev: &PrevSlice, theta: f64, eta: f64, gamma: f64, rho: f64, k_penalty: &[f64]) -> f64 {
-    k_penalty.iter().map(|&k| {
-        let w_prev = ssvi::total_variance(k, prev.theta, prev.eta, prev.gamma, prev.rho);
-        let w_cur = ssvi::total_variance(k, theta, eta, gamma, rho);
-        let violation = (w_prev - w_cur).max(0.0);
-        violation * violation
-    }).sum()
+fn calendar_penalty(
+    prev: &PrevSlice,
+    theta: f64,
+    eta: f64,
+    gamma: f64,
+    rho: f64,
+    k_penalty: &[f64],
+) -> f64 {
+    k_penalty
+        .iter()
+        .map(|&k| {
+            let w_prev = ssvi::total_variance(k, prev.theta, prev.eta, prev.gamma, prev.rho);
+            let w_cur = ssvi::total_variance(k, theta, eta, gamma, rho);
+            let violation = (w_prev - w_cur).max(0.0);
+            violation * violation
+        })
+        .sum()
 }
 
 /// Calibrate SSVI with calendar arbitrage penalty.

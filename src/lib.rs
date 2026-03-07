@@ -1,7 +1,8 @@
-pub mod model;
-pub mod solver;
 pub mod calibration;
 pub mod fit_common;
+pub mod math;
+pub mod model;
+pub mod solver;
 
 // Backward-compatible re-exports: allow `essvi::ssvi`, `essvi::nelder_mead`, `essvi::brent`
 pub use model::ssvi;

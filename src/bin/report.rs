@@ -1,7 +1,6 @@
 /// Generate SSVI fit quality report across parameter grid:
 ///   T (expiry), skew slope — with η diagnostics showing constraint saturation.
-
-use essvi::calibration::{calibrate, CalibrationConfig, CalibrationInput};
+use essvi::calibration::{CalibrationConfig, CalibrationInput, calibrate};
 use essvi::ssvi;
 use plotters::prelude::*;
 use std::fs;
@@ -12,7 +11,7 @@ use std::io::Write;
 struct Scenario {
     label: String,
     t_expiry: f64,
-    slope: f64,       // put-side vol increase per unit |k|
+    slope: f64, // put-side vol increase per unit |k|
     k_star: f64,
     atm_vol: f64,
 }
@@ -66,9 +65,10 @@ fn run_scenario(s: Scenario) -> Option<FitResult> {
     let (k_slice, w_market) = make_market_data(&s);
     let theta_star = s.atm_vol * s.atm_vol * s.t_expiry;
 
-    let weights: Vec<f64> = k_slice.iter().map(|&k| {
-        if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 }
-    }).collect();
+    let weights: Vec<f64> = k_slice
+        .iter()
+        .map(|&k| if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 })
+        .collect();
 
     let input = CalibrationInput {
         k_slice: &k_slice,
@@ -130,9 +130,7 @@ fn plot_fit(result: &FitResult, path: &str) -> Result<(), Box<dyn std::error::Er
 
     let title = format!(
         "T={}, slope={}, k*={}",
-        result.scenario.t_expiry,
-        result.scenario.slope,
-        result.scenario.k_star
+        result.scenario.t_expiry, result.scenario.slope, result.scenario.k_star
     );
 
     let mut chart = ChartBuilder::on(&root)
@@ -149,27 +147,29 @@ fn plot_fit(result: &FitResult, path: &str) -> Result<(), Box<dyn std::error::Er
         .draw()?;
 
     // Market points
-    chart.draw_series(
-        result
-            .k_slice
-            .iter()
-            .zip(result.iv_market.iter())
-            .map(|(&k, &iv)| Circle::new((k, iv), 3, BLUE.filled())),
-    )?
-    .label("Market")
-    .legend(|(x, y)| Circle::new((x + 10, y), 3, BLUE.filled()));
+    chart
+        .draw_series(
+            result
+                .k_slice
+                .iter()
+                .zip(result.iv_market.iter())
+                .map(|(&k, &iv)| Circle::new((k, iv), 3, BLUE.filled())),
+        )?
+        .label("Market")
+        .legend(|(x, y)| Circle::new((x + 10, y), 3, BLUE.filled()));
 
     // Fit line
-    chart.draw_series(LineSeries::new(
-        result
-            .k_slice
-            .iter()
-            .zip(result.iv_fit.iter())
-            .map(|(&k, &iv)| (k, iv)),
-        RED.stroke_width(2),
-    ))?
-    .label("SSVI Fit")
-    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED.stroke_width(2)));
+    chart
+        .draw_series(LineSeries::new(
+            result
+                .k_slice
+                .iter()
+                .zip(result.iv_fit.iter())
+                .map(|(&k, &iv)| (k, iv)),
+            RED.stroke_width(2),
+        ))?
+        .label("SSVI Fit")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED.stroke_width(2)));
 
     chart
         .configure_series_labels()
@@ -271,11 +271,16 @@ fn main() {
 
     // Parameter grid — T=1 uses milder slopes since SSVI saturates there
     let cases: Vec<(f64, f64)> = vec![
-        (0.03, 0.5), (0.03, 1.0),
-        (0.1,  0.5), (0.1,  1.0),
-        (0.25, 0.5), (0.25, 1.0),
-        (0.5,  0.5), (0.5,  1.0),
-        (1.0,  0.2), (1.0,  0.4),
+        (0.03, 0.5),
+        (0.03, 1.0),
+        (0.1, 0.5),
+        (0.1, 1.0),
+        (0.25, 0.5),
+        (0.25, 1.0),
+        (0.5, 0.5),
+        (0.5, 1.0),
+        (1.0, 0.2),
+        (1.0, 0.4),
     ];
     let atm_vol = 0.4;
     let k_star = 0.01;
@@ -283,7 +288,10 @@ fn main() {
     let mut md = String::new();
 
     md.push_str("# SSVI Slice Fit Quality Report\n\n");
-    md.push_str(&format!("ATM vol = {}  |  k range = [-0.4, 0.4]  |  k\\* = {}\n\n", atm_vol, k_star));
+    md.push_str(&format!(
+        "ATM vol = {}  |  k range = [-0.4, 0.4]  |  k\\* = {}\n\n",
+        atm_vol, k_star
+    ));
 
     // ── Section 1: T × Slope table ─────────────────────────────
 
@@ -326,7 +334,11 @@ fn main() {
     md.push_str("## 2. Fit Plots (all combinations)\n\n");
 
     for &(t, slope) in &cases {
-        let name = format!("T{}_s{}", format!("{}", t).replace('.', "p"), format!("{}", slope).replace('.', "p"));
+        let name = format!(
+            "T{}_s{}",
+            format!("{}", t).replace('.', "p"),
+            format!("{}", slope).replace('.', "p")
+        );
         let s = Scenario {
             label: name.clone(),
             t_expiry: t,

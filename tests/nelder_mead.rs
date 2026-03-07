@@ -1,6 +1,5 @@
 /// Nelder-Mead optimizer unit tests (migrated from src/solver/nelder_mead.rs).
-
-use essvi::solver::nelder_mead::{nelder_mead_bounded, NelderMeadConfig};
+use essvi::solver::nelder_mead::{NelderMeadConfig, nelder_mead_bounded};
 
 #[test]
 fn rosenbrock_2d() {

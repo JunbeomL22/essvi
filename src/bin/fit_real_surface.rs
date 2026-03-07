@@ -3,12 +3,11 @@
 /// Step 1: Fit each slice independently (no penalty).
 /// Step 2: Re-fit sequentially with calendar penalty using previous slice,
 ///         sampling k from -0.5 to 0.5 step 0.05, lambda=100.
-
 use essvi::calibration::{
-    calibrate, calibrate_with_calendar_penalty, CalibrationConfig, CalibrationInput,
-    CalibrationResult, PrevSlice,
+    CalibrationConfig, CalibrationInput, CalibrationResult, PrevSlice, calibrate,
+    calibrate_with_calendar_penalty,
 };
-use essvi::fit_common::{build_market_slices, plot_fit, FitResult, SliceData};
+use essvi::fit_common::{FitResult, SliceData, build_market_slices, plot_fit};
 use essvi::ssvi;
 use std::fs;
 use std::io::Write;
@@ -97,9 +96,11 @@ fn main() {
         let theta_star = atm_vol * atm_vol * t;
         let k_star = slice.k[slice.k.len() / 2];
 
-        let weights: Vec<f64> = slice.k.iter().map(|&k| {
-            if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 }
-        }).collect();
+        let weights: Vec<f64> = slice
+            .k
+            .iter()
+            .map(|&k| if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 })
+            .collect();
 
         let input = CalibrationInput {
             k_slice: &slice.k,
@@ -136,7 +137,10 @@ fn main() {
     }
 
     // ── Step 2: Sequential refit with calendar penalty ───────
-    println!("\n=== Step 2: Surface fit with calendar penalty (lambda={}) ===", lambda);
+    println!(
+        "\n=== Step 2: Surface fit with calendar penalty (lambda={}) ===",
+        lambda
+    );
     let mut surface_results: Vec<FitResult> = Vec::new();
 
     for (i, slice) in slices.iter().enumerate() {
@@ -146,9 +150,11 @@ fn main() {
         let theta_star = atm_vol * atm_vol * t;
         let k_star = slice.k[slice.k.len() / 2];
 
-        let weights: Vec<f64> = slice.k.iter().map(|&k| {
-            if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 }
-        }).collect();
+        let weights: Vec<f64> = slice
+            .k
+            .iter()
+            .map(|&k| if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 })
+            .collect();
 
         let input = CalibrationInput {
             k_slice: &slice.k,
@@ -181,12 +187,17 @@ fn main() {
                 rho: prev_fr.rho,
             };
 
-            let res = calibrate_with_calendar_penalty(&input, &config, &prev, &k_penalty, lambda, &init)
-                .expect("surface calibration must succeed");
+            let res =
+                calibrate_with_calendar_penalty(&input, &config, &prev, &k_penalty, lambda, &init)
+                    .expect("surface calibration must succeed");
             let fr = compute_fit_result(slice, &res, Some(&prev), &k_penalty);
             println!(
                 "T={:.4}: max_err={:.1} bps, RMSE={:.1} bps, cal_viol={}, max_cal_viol={:.1} bps",
-                t, fr.max_iv_err_bps, fr.rmse_iv_bps, fr.calendar_violations, fr.max_calendar_violation_bps
+                t,
+                fr.max_iv_err_bps,
+                fr.rmse_iv_bps,
+                fr.calendar_violations,
+                fr.max_calendar_violation_bps
             );
             surface_results.push(fr);
         }
@@ -216,11 +227,19 @@ fn main() {
     // Unconstrained summary
     md.push_str("## Step 1: Unconstrained Fit\n\n");
     md.push_str("| T | max IV err (bps) | RMSE IV (bps) | eta | gamma | rho | cal violations |\n");
-    md.push_str("|------:|-----------------:|--------------:|------:|------:|------:|--------------:|\n");
+    md.push_str(
+        "|------:|-----------------:|--------------:|------:|------:|------:|--------------:|\n",
+    );
     for (_, fr) in &unconstrained {
         md.push_str(&format!(
             "| {:.4} | {:.1} | {:.1} | {:.4} | {:.4} | {:.4} | {} |\n",
-            fr.t_expiry, fr.max_iv_err_bps, fr.rmse_iv_bps, fr.eta, fr.gamma, fr.rho, fr.calendar_violations
+            fr.t_expiry,
+            fr.max_iv_err_bps,
+            fr.rmse_iv_bps,
+            fr.eta,
+            fr.gamma,
+            fr.rho,
+            fr.calendar_violations
         ));
     }
     md.push_str("\n");
@@ -257,7 +276,10 @@ fn main() {
             "max err: {:.1} bps | RMSE: {:.1} bps | eta={:.4}, gamma={:.4}, rho={:.4} | cal violations: {}\n\n",
             r.max_iv_err_bps, r.rmse_iv_bps, r.eta, r.gamma, r.rho, r.calendar_violations
         ));
-        md.push_str(&format!("![T={:.4}](plots/fit_surface_T{}.svg)\n\n", r.t_expiry, t_str));
+        md.push_str(&format!(
+            "![T={:.4}](plots/fit_surface_T{}.svg)\n\n",
+            r.t_expiry, t_str
+        ));
     }
 
     // Calendar arbitrage analysis

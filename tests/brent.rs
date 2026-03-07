@@ -1,5 +1,4 @@
 /// Brent root finder unit tests (migrated from src/solver/brent.rs).
-
 use essvi::solver::brent::brent;
 
 #[test]

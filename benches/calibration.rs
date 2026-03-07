@@ -1,7 +1,7 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use essvi::calibration::{
-    calibrate, calibrate_with_calendar_penalty, solve_theta, CalibrationConfig, CalibrationInput,
-    PrevSlice,
+    CalibrationConfig, CalibrationInput, PrevSlice, calibrate, calibrate_with_calendar_penalty,
+    solve_theta,
 };
 use essvi::ssvi;
 
@@ -135,8 +135,10 @@ fn bench_surface_calibration(c: &mut Criterion) {
                         // First do unconstrained to get initial guess
                         let unc = calibrate(&input, &config).unwrap();
                         let init = [unc.eta, unc.gamma, unc.rho];
-                        calibrate_with_calendar_penalty(&input, &config, p, &k_penalty, lambda, &init)
-                            .unwrap()
+                        calibrate_with_calendar_penalty(
+                            &input, &config, p, &k_penalty, lambda, &init,
+                        )
+                        .unwrap()
                     }
                 };
 

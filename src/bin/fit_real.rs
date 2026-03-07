@@ -2,9 +2,8 @@
 ///
 /// Each slice has ~40 data points approximating the scatter plots in the image.
 /// The data mimics typical equity index (SPX-like) implied volatility surfaces.
-
-use essvi::calibration::{calibrate, CalibrationConfig, CalibrationInput};
-use essvi::fit_common::{build_market_slices, plot_fit, FitResult, SliceData};
+use essvi::calibration::{CalibrationConfig, CalibrationInput, calibrate};
+use essvi::fit_common::{FitResult, SliceData, build_market_slices, plot_fit};
 use essvi::ssvi;
 use std::fs;
 use std::io::Write;
@@ -16,9 +15,11 @@ fn fit_slice(slice: &SliceData) -> Option<FitResult> {
     let theta_star = atm_vol * atm_vol * t;
     let k_star = slice.k[slice.k.len() / 2]; // midpoint as ATM reference
 
-    let weights: Vec<f64> = slice.k.iter().map(|&k| {
-        if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 }
-    }).collect();
+    let weights: Vec<f64> = slice
+        .k
+        .iter()
+        .map(|&k| if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 })
+        .collect();
 
     let input = CalibrationInput {
         k_slice: &slice.k,
@@ -132,15 +133,15 @@ fn main() {
     md.push_str("## Fit Plots\n\n");
     for r in &results {
         let t_str = format!("{:.3}", r.t_expiry).replace('.', "p");
-        md.push_str(&format!(
-            "### T = {:.4}\n\n",
-            r.t_expiry
-        ));
+        md.push_str(&format!("### T = {:.4}\n\n", r.t_expiry));
         md.push_str(&format!(
             "max err: {:.1} bps | RMSE: {:.1} bps | eta={:.4}, gamma={:.4}, rho={:.4}\n\n",
             r.max_iv_err_bps, r.rmse_iv_bps, r.eta, r.gamma, r.rho
         ));
-        md.push_str(&format!("![T={:.4}](plots/fit_real_T{}.svg)\n\n", r.t_expiry, t_str));
+        md.push_str(&format!(
+            "![T={:.4}](plots/fit_real_T{}.svg)\n\n",
+            r.t_expiry, t_str
+        ));
     }
 
     // No-arbitrage analysis

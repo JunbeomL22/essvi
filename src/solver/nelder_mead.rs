@@ -177,8 +177,7 @@ where
         // Shrink
         for i in 1..=n {
             for j in 0..n {
-                simplex[i][j] =
-                    simplex[0][j] + config.sigma * (simplex[i][j] - simplex[0][j]);
+                simplex[i][j] = simplex[0][j] + config.sigma * (simplex[i][j] - simplex[0][j]);
             }
             project(&mut simplex[i], lb, ub);
             fvals[i] = f(&simplex[i]);

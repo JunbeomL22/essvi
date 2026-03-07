@@ -1,5 +1,4 @@
 /// SSVI model unit tests (migrated from src/model/ssvi.rs).
-
 use essvi::model::ssvi::{no_arbitrage_satisfied, phi, total_variance};
 
 #[test]
