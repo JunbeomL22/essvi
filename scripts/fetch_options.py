@@ -18,8 +18,8 @@ import yfinance as yf
 # --- Configuration ---
 
 TICKERS = {
-    "^SPX": ("cboe", "spx"),        # S&P 500 Index — European
-    "^STOXX50E": ("eurex", "sx5e"),  # Euro Stoxx 50 — European
+    "^SPX": ("cboe", "spx"),   # S&P 500 Index — European
+    "^NDX": ("cboe", "ndx"),   # Nasdaq 100 Index — European
 }
 
 DATA_DIR = "data"
