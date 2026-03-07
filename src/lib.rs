@@ -1,5 +1,6 @@
 pub mod calibration;
 pub mod crude_solver;
+pub mod direct_solver;
 pub mod fit_common;
 pub mod math;
 pub mod model;
