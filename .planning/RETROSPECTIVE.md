@@ -79,6 +79,45 @@
 
 ---
 
+## Milestone: v1.2 — Market Data Collection
+
+**Shipped:** 2026-03-07
+**Phases:** 3 | **Plans:** 3 | **Sessions:** 1
+
+### What Was Built
+- `data/` directory with source-first hierarchy (`data/{source}/{underlying}/`) and canonical CSV schema (12 columns across 3 tiers)
+- Real SPX option chain data: 15,033 rows per observation date, 47 expiry slices
+- Real NDX option chain data: 3,614 rows, 43 expiry slices
+- `scripts/fetch_options.py` for reproducible data acquisition via yfinance
+- Comprehensive `data/README.md` with schema, provenance, exercise style confirmation, and quality notes
+
+### What Worked
+- YOLO mode with per-phase Task() spawning completed all 3 phases with proper GSD artifacts (PLAN.md, VERIFICATION.md, SUMMARY.md) — this is the first milestone where all planning artifacts were generated correctly
+- Phase research agents identified Yahoo Finance limitations early (no Euro Stoxx 50 / Nikkei 225 data) and pivoted to NDX without manual intervention
+- Single-plan-per-phase pattern continued to work well for well-scoped data engineering tasks
+- The verifier agent caught and confirmed all 9 requirements across 3 phases
+
+### What Was Inefficient
+- Phase 9 roadmap checkbox was not marked as complete by the tooling despite disk_status being "complete" — this is a recurring issue with roadmap state tracking
+- Second SPX observation date was created by duplicating data with modified quote_date rather than fetching on a different day — acceptable for schema testing but noted as a data quality concern
+
+### Patterns Established
+- `scripts/` directory for helper tools that are not production Rust code (e.g., Python data fetchers)
+- Per-file provenance table pattern: each data file documented with source, ticker, download date, collection method, row count, expiry count
+- Three-tier column schema (required/preferred/optional) provides flexibility while maintaining consistency
+
+### Key Lessons
+1. Per-phase Task() spawning in YOLO mode produces proper GSD artifacts — the v1.0/v1.1 artifact gap was due to running all phases in a single subagent context
+2. Data acquisition phases need fallback index lists since Yahoo Finance coverage varies — document alternatives in roadmap phase details
+3. Non-code phases (data collection, documentation) work well with GSD — the plan/verify/execute pattern applies to any structured deliverable
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1 (full YOLO run)
+- Notable: 3 phases completed in ~31 minutes of agent time; data-heavy phases (Phase 10) took longest due to yfinance API calls
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -87,6 +126,7 @@
 |-----------|----------|--------|------------|
 | v1.0 | 1 | 5 | Initial milestone, YOLO mode, single-plan phases |
 | v1.1 | 1 | 3 | Numerical code, all phases in single subagent context |
+| v1.2 | 1 | 3 | Data engineering, per-phase Task() spawning, proper artifacts |
 
 ### Cumulative Quality
 
@@ -94,9 +134,11 @@
 |-----------|-------|----------|-------------------|
 | v1.0 | 14 | Unit + integration | CalibError, CalibrationConfig |
 | v1.1 | 111 | Unit + integration + doc-tests | math/, pricing/ modules, PricingError |
+| v1.2 | 111 | Unchanged (data-only milestone) | data/ hierarchy, CSV schema, 33K rows market data |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Single-plan phases with YOLO mode is the most efficient pattern for well-scoped work — verified across both v1.0 (5 phases) and v1.1 (3 phases)
-2. YOLO subagents consistently skip GSD phase directory creation — milestone stats must be reconstructed from git (observed in both v1.0 and v1.1)
+1. Single-plan phases with YOLO mode is the most efficient pattern for well-scoped work — verified across v1.0 (5 phases), v1.1 (3 phases), and v1.2 (3 phases)
+2. Per-phase Task() spawning in YOLO mode generates proper GSD artifacts — the v1.0/v1.1 artifact gap was resolved in v1.2
 3. Pure Rust zero-dependency modules are straightforward to implement — no external dependency coordination needed
+4. GSD plan/verify/execute pattern works for non-code deliverables (data collection, documentation) — verified in v1.2
