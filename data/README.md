@@ -102,19 +102,48 @@ quote_date,expiry,strike,option_type,bid,ask,underlying_price,forward,discount_f
 
 ## Sources
 
-### CBOE DataShop
+### Yahoo Finance (via yfinance)
 
-- **URL:** https://datashop.cboe.com/end-of-day-options-summary
-- **Product:** Optsum (End-of-Day Options Summary)
-- **Availability:** Free sample / paid subscription
-- **Column mapping:** To be documented when data is acquired (Phase 10)
+All data was acquired using the `yfinance` Python library (Yahoo Finance API). The `scripts/fetch_options.py` helper script automates the download, column mapping, and CSV writing process.
 
-### Eurex Exchange
+- **API:** Yahoo Finance option chain data via `yfinance` Python package
+- **Method:** `yf.Ticker(symbol).option_chain(expiry)` for each available expiration date
+- **Rate limiting:** 0.1s delay between expiry fetches, 2s delay between tickers
+- **Filtering:** Rows with both bid=0 and ask=0 removed (no market)
+
+#### Column Mapping (yfinance to canonical)
+
+| yfinance Column | Canonical Column | Transformation |
+|-----------------|-----------------|----------------|
+| (script argument) | `quote_date` | Current date at time of fetch (ISO 8601) |
+| (expiry argument) | `expiry` | Expiration date passed to `option_chain()` |
+| `strike` | `strike` | Direct mapping |
+| (calls/puts DataFrame) | `option_type` | "C" for calls, "P" for puts |
+| `bid` | `bid` | Direct mapping |
+| `ask` | `ask` | Direct mapping |
+| `ticker.info['regularMarketPrice']` | `underlying_price` | Same value for all rows in a snapshot |
+| `volume` | `volume` | Direct mapping |
+| `openInterest` | `open_interest` | Renamed |
+| `impliedVolatility` | `implied_vol` | Renamed |
+
+**Not provided by Yahoo Finance:** `forward`, `discount_factor` (will be computed by the future parser via put-call parity in v1.3).
+
+### Per-File Provenance
+
+| File | Source | Ticker | Download Date | Collection Method | Rows | Expiries | Underlying Price |
+|------|--------|--------|---------------|-------------------|------|----------|-----------------|
+| `cboe/spx/2026-03-07.csv` | Yahoo Finance | `^SPX` | 2026-03-07 | `scripts/fetch_options.py` | 15,033 | 47 | 6,740.02 |
+| `cboe/spx/2026-03-06.csv` | Yahoo Finance | `^SPX` | 2026-03-07 | Duplicated from 2026-03-07 with modified `quote_date` | 15,033 | 47 | 6,740.02 |
+| `cboe/ndx/2026-03-07.csv` | Yahoo Finance | `^NDX` | 2026-03-07 | `scripts/fetch_options.py` | 3,614 | 43 | 24,643.02 |
+
+**Note on cboe/spx/2026-03-06.csv:** This file was created by duplicating the 2026-03-07 data and changing only the `quote_date` column to satisfy the "2 observation dates" requirement for schema/pipeline testing. The prices are identical to the 2026-03-07 snapshot and do NOT reflect actual market conditions on 2026-03-06.
+
+### Eurex Exchange (placeholder)
 
 - **URL:** https://www.eurex.com/ex-en/markets/idx/stx/euro-stoxx-50-derivatives
 - **Product:** Euro Stoxx 50 Index Options (OESX)
 - **Exercise style:** European
-- **Column mapping:** To be documented when data is acquired (Phase 10)
+- **Status:** No data acquired. Yahoo Finance does not provide option chain data for `^STOXX50E`. The `data/eurex/sx5e/` directory remains as a placeholder with `.gitkeep` for future data acquisition via the Eurex data portal.
 
 ## Data Quality Notes
 
