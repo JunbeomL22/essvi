@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.1 Pricing Primitives (Shipped: 2026-03-07)
+
+**Delivered:** Ported Black-76 pricing and Let's Be Rational implied volatility solver as independent library modules with full math foundations (erf, normal distributions, rational cubic interpolation).
+
+**Phases completed:** 3 phases, 3 plans
+**Requirements:** 14/14 complete (MATH x5, BLK x5, IVOL x4)
+**Lines of Rust:** 4,663 (up from 2,284)
+**Git range:** dbd90cb..c8deaff
+**Timeline:** 1 day (2026-03-07)
+
+**Key accomplishments:**
+- Implemented fdlibm-based erf/erfc/erfcx with machine-precision accuracy (Cody's rational Chebyshev approximations)
+- Standard normal PDF, CDF, and inverse CDF via Acklam's algorithm with Halley refinement
+- High-precision normal CDF with asymptotic tail expansion for extreme arguments
+- Black-76 option pricing with full greeks (delta, gamma, vega, theta) and combined greeks call
+- PricingError type with AboveMaximum, BelowIntrinsic, and InvalidInput variants
+- Implied volatility solver achieving machine-precision convergence via bisection initial guess + Halley iterations
+
+---
+
 ## v1.0 Idiomatic Restructuring (Shipped: 2026-03-07)
 
 **Delivered:** Transformed essvi from a working-but-rough codebase into idiomatic Rust with clean module hierarchy, proper error types, configurable calibration, deduplicated binaries, and external tests.

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A pure Rust library for calibrating implied volatility surfaces using SVI-family parameterizations (SSVI and eSSVI). Provides derivative-free optimization (bounded Nelder-Mead), implicit theta resolution (Brent root-finding), configurable calibration parameters, proper error types, and no-arbitrage enforcement. Organized into `solver/` and `model/` submodules with all tests in `tests/`.
+A pure Rust library for calibrating implied volatility surfaces using SVI-family parameterizations (SSVI and eSSVI). Provides Black-76 option pricing, machine-precision implied volatility recovery (Let's Be Rational), derivative-free optimization (bounded Nelder-Mead), implicit theta resolution (Brent root-finding), configurable calibration parameters, proper error types, and no-arbitrage enforcement. Organized into `math/`, `pricing/`, `solver/`, and `model/` submodules with all tests in `tests/`.
 
 ## Core Value
 
@@ -23,24 +23,15 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - ✓ Proper error types (Result<T, CalibError> replacing Option<T>) — v1.0
 - ✓ Deduplicated binary code (shared SliceData, make_slice, FitResult, plot_fit) — v1.0
 - ✓ External test directory mirroring src/ structure — v1.0
+- ✓ Black-76 pricing model (undiscounted price/delta, greeks, gamma, vega, theta) — v1.1
+- ✓ Let's Be Rational implied volatility solver (Jaeckel's machine-precision algorithm) — v1.1
+- ✓ Supporting math: Cody's erf/erfc/erfcx, normal distribution (standard + high-precision) — v1.1
+- ✓ Rational cubic interpolation utilities — v1.1
+- ✓ PricingError type and numerical constants — v1.1
 
 ### Active
 
-- [ ] Black-76 pricing model (undiscounted price/delta, greeks, gamma, vega, theta)
-- [ ] Let's Be Rational implied volatility solver (Jaeckel's machine-precision algorithm)
-- [ ] Supporting math: Cody's erf/erfc/erfcx, normal distribution (standard + high-precision)
-- [ ] Rational cubic interpolation utilities
-- [ ] PricingError type and numerical constants
-
-## Current Milestone: v1.1 Pricing Primitives
-
-**Goal:** Port Black-76 formula and Let's Be Rational implied volatility solver from fractal-engine as independent library modules.
-
-**Target features:**
-- Black-76 option pricing (futures options)
-- Jaeckel's implied volatility from option prices (machine-precision, 2-iteration convergence)
-- Normal distribution functions (standard and high-precision)
-- Error function implementations (Cody's rational Chebyshev approximations)
+(None — define next milestone requirements with `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -53,9 +44,9 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 ## Context
 
-Shipped v1.0 with 2,284 LOC Rust. Tech stack: pure Rust, plotters for reporting.
-Module structure: `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src/calibration.rs`, `src/fit_common.rs`.
-14 tests (12 unit in `tests/`, 2 integration in `tests/steep_skew.rs`), all passing.
+Shipped v1.1 with 4,663 LOC Rust. Tech stack: pure Rust, plotters for reporting.
+Module structure: `src/math/{erf,normal,normal_hp,constants}.rs`, `src/pricing/{black76,error,lets_be_rational,rational_cubic}.rs`, `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src/calibration.rs`, `src/fit_common.rs`.
+111 tests (91 integration in `tests/`, 20 doc-tests), all passing.
 
 ## Constraints
 
@@ -76,6 +67,12 @@ Module structure: `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src
 | k_penalty/lambda as direct params, not in CalibrationConfig | Surface-level concerns, not per-slice calibration knobs | ✓ Good |
 | Shared binary code in src/fit_common.rs (library module) | Cargo auto-discovers src/bin/*.rs as binaries; library module is idiomatic | ✓ Good |
 | FitResult superset struct with default 0 for calendar fields | Avoids Option wrapping, keeps struct simple | ✓ Good |
+| fdlibm-based erf/erfc over custom polynomial | Battle-tested reference implementation, machine-precision | ✓ Good |
+| Acklam + Halley for inverse CDF | Fast initial approximation with quadratic convergence refinement | ✓ Good |
+| Asymptotic expansion for normal CDF tails | Avoids premature 0/1 clamping at extreme arguments | ✓ Good |
+| Bisection + Halley for implied volatility | Robust initial bracket, machine-precision in 2 iterations | ✓ Good |
+| i32 q (+1/-1) convention over OptionType enum | Matches Let's Be Rational API directly, avoids unnecessary abstraction | ✓ Good |
+| PricingError with 3 variants | Covers all pricing failure modes (above max, below intrinsic, invalid input) | ✓ Good |
 
 ---
-*Last updated: 2026-03-07 after v1.1 milestone start*
+*Last updated: 2026-03-07 after v1.1 milestone*
