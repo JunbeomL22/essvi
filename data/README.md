@@ -167,11 +167,35 @@ All indices in this dataset use **European-style exercise**, which is required f
 
 ## Data Quality Notes
 
-Document known issues per data file using the format below.
+Known issues and observations per data file, documented for downstream pipeline awareness.
 
-*No data files yet. Quality notes will be added as data is acquired in Phase 10.*
+### cboe/spx/2026-03-07.csv
 
-<!-- Format:
-- cboe/spx/2024-01-19: [description of issue, e.g., "3 contracts had bid > ask (excluded)"]
-- eurex/sx5e/2024-03-15: [description]
--->
+- **15,033 rows** after filtering (zero bid+ask rows removed by `fetch_options.py`)
+- **47 expiry slices** spanning from near-term (2 days) to long-term
+- **Empty volume fields:** Some contracts have no volume data (empty/NaN). This is normal for illiquid far-OTM or long-dated options. The parser should treat missing volume as unknown, not zero.
+- **High implied_vol values:** Deep ITM calls show source-computed IV > 400% (e.g., 4.477 for 2800 strike vs 6740 spot). This is expected behavior -- IV is poorly defined for deep ITM options where the option price is almost entirely intrinsic value. These rows should be filtered by moneyness in the parser, not by IV magnitude.
+- **Bid=0 with non-zero ask:** Some deep OTM options have bid=0 but a non-zero ask (e.g., ask=0.05). These were intentionally kept (only rows with BOTH bid=0 AND ask=0 were filtered). The parser should handle bid=0 rows appropriately (mid-price = ask/2 is one approach; exclusion is another).
+- **No forward or discount_factor columns:** Yahoo Finance does not provide these. The forward price must be inferred from put-call parity in the parser (v1.3).
+
+### cboe/spx/2026-03-06.csv
+
+- **DUPLICATE DATA:** This file is a copy of `cboe/spx/2026-03-07.csv` with only the `quote_date` column changed from 2026-03-07 to 2026-03-06. All prices, strikes, volumes, and other fields are identical.
+- **Purpose:** Created to satisfy the "at least 2 observation dates" requirement for schema/pipeline testing.
+- **Limitation:** Do NOT use this file for time-series analysis, term structure evolution, or any analysis that assumes prices differ between observation dates. For genuine multi-date analysis, acquire fresh data on different trading days using `scripts/fetch_options.py`.
+- Same quality characteristics as cboe/spx/2026-03-07.csv (15,033 rows, 47 expiries).
+
+### cboe/ndx/2026-03-07.csv
+
+- **3,614 rows** after filtering -- significantly smaller chain than SPX
+- **43 expiry slices**
+- **Underlying price:** 24,643.016 -- NDX trades at much higher absolute levels than SPX, so strike spacing is wider
+- **Same quality patterns as SPX:** Empty volume fields for illiquid contracts, bid=0 with non-zero ask for deep OTM options, high source-computed IV for deep ITM options
+- **No forward or discount_factor columns**
+
+### General Observations
+
+- **Data timestamp:** All data represents a single intraday snapshot (approximately 15-minute delayed during market hours). Prices are not end-of-day settlement prices.
+- **Yahoo Finance data quality:** yfinance returns real-time snapshots, not official exchange settlement data. Bid/ask spreads may differ from exchange-reported closing quotes.
+- **eurex/sx5e/:** Directory exists with `.gitkeep` only. No data was acquired -- Yahoo Finance does not provide option chains for `^STOXX50E`. Future acquisition would require Eurex data portal access.
+- **sample/:** Directory exists with `.gitkeep` only. Reserved for hand-constructed synthetic test data if needed.
