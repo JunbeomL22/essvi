@@ -1,4 +1,4 @@
-use essvi::direct_solver::{self, ButterflyResult, DirectCalibConfig};
+use essvi::direct_solver::{self, ButterflyResult, DirectCalibConfig, SliceInput};
 use essvi::model::ssvi;
 
 /// Helper: generate evenly spaced points from lo to hi.
@@ -273,5 +273,182 @@ fn test_no_butterfly_in_objective() {
     assert!(
         direct_result.sse < 1e-6 && crude_result.sse < 1e-6,
         "Both solvers should find near-zero SSE on exact data"
+    );
+}
+
+// ── Sequential Surface Calibration Tests (Phase 16) ──────────
+
+#[test]
+fn test_calibrate_surface_monotonic_theta() {
+    // 4 slices with known increasing theta values
+    let params: [(f64, f64); 4] = [
+        (0.1, 0.02),  // T, theta
+        (0.25, 0.04),
+        (0.5, 0.08),
+        (1.0, 0.15),
+    ];
+    let eta = 0.8;
+    let gamma = 0.5;
+    let rho = -0.3;
+
+    let k_points = linspace(-0.5, 0.5, 21);
+    let w_data: Vec<Vec<f64>> = params
+        .iter()
+        .map(|&(_t, theta)| ssvi::total_variance_slice(&k_points, theta, eta, gamma, rho))
+        .collect();
+
+    // Deliberately scrambled order: T=0.5, T=0.1, T=1.0, T=0.25
+    let slices = vec![
+        SliceInput { t: 0.5, k: &k_points, w: &w_data[2] },
+        SliceInput { t: 0.1, k: &k_points, w: &w_data[0] },
+        SliceInput { t: 1.0, k: &k_points, w: &w_data[3] },
+        SliceInput { t: 0.25, k: &k_points, w: &w_data[1] },
+    ];
+
+    let cfg = DirectCalibConfig::default();
+    let results = direct_solver::calibrate_surface(&slices, &cfg);
+
+    assert_eq!(results.len(), 4);
+
+    // Results should be in T-sorted order with theta close to known values
+    let expected_thetas = [0.02, 0.04, 0.08, 0.15];
+    for (i, (res, &expected)) in results.iter().zip(expected_thetas.iter()).enumerate() {
+        assert!(
+            (res.theta - expected).abs() < 0.02,
+            "Slice {}: theta expected ~{}, got {}",
+            i, expected, res.theta
+        );
+        assert!(
+            res.sse < 1e-6,
+            "Slice {}: SSE should be small, got {}",
+            i, res.sse
+        );
+    }
+
+    // Monotonicity check
+    for i in 0..results.len() - 1 {
+        assert!(
+            results[i + 1].theta >= results[i].theta - 1e-6,
+            "Monotonicity violated: theta[{}]={} < theta[{}]={}",
+            i + 1, results[i + 1].theta, i, results[i].theta
+        );
+    }
+}
+
+#[test]
+fn test_calibrate_surface_calendar_penalty_effect() {
+    // Calendar arbitrage scenario: short-dated slice has higher theta than mid-dated
+    let eta = 0.5;
+    let gamma = 0.5;
+    let rho = 0.0;
+
+    let k_points = linspace(-0.5, 0.5, 21);
+    let w_short = ssvi::total_variance_slice(&k_points, 0.10, eta, gamma, rho);
+    let w_mid = ssvi::total_variance_slice(&k_points, 0.05, eta, gamma, rho);
+    let w_long = ssvi::total_variance_slice(&k_points, 0.15, eta, gamma, rho);
+
+    let slices = vec![
+        SliceInput { t: 0.1, k: &k_points, w: &w_short },
+        SliceInput { t: 0.5, k: &k_points, w: &w_mid },
+        SliceInput { t: 1.0, k: &k_points, w: &w_long },
+    ];
+
+    // No penalty: theta sequence should NOT be monotonic (recovers true non-monotonic thetas)
+    let cfg_no_penalty = DirectCalibConfig {
+        lambda_calendar: 0.0,
+        ..DirectCalibConfig::default()
+    };
+    let results_no = direct_solver::calibrate_surface(&slices, &cfg_no_penalty);
+    assert!(
+        results_no[1].theta < results_no[0].theta - 0.01,
+        "Without penalty, theta[1]={} should be below theta[0]={}",
+        results_no[1].theta, results_no[0].theta
+    );
+
+    // Strong penalty: theta[1] should be pushed UP toward theta[0]
+    // (soft penalty won't achieve perfect monotonicity when data strongly opposes,
+    // but the gap should shrink significantly compared to the no-penalty case)
+    let cfg_strong = DirectCalibConfig {
+        lambda_calendar: 100.0,
+        ..DirectCalibConfig::default()
+    };
+    let results_strong = direct_solver::calibrate_surface(&slices, &cfg_strong);
+    let gap_no_penalty = results_no[0].theta - results_no[1].theta;
+    let gap_strong = results_strong[0].theta - results_strong[1].theta;
+    assert!(
+        gap_strong < gap_no_penalty * 0.5,
+        "Strong penalty should reduce monotonicity gap: no_penalty gap={:.4}, strong gap={:.4}",
+        gap_no_penalty, gap_strong
+    );
+}
+
+#[test]
+fn test_calibrate_surface_single_slice() {
+    let theta = 0.04;
+    let eta = 0.5;
+    let gamma = 0.5;
+    let rho = 0.0;
+
+    let k_points = linspace(-0.5, 0.5, 21);
+    let w_market = ssvi::total_variance_slice(&k_points, theta, eta, gamma, rho);
+
+    // calibrate_surface with single slice
+    let slices = vec![SliceInput { t: 0.5, k: &k_points, w: &w_market }];
+    let cfg = DirectCalibConfig::default();
+    let surface_results = direct_solver::calibrate_surface(&slices, &cfg);
+
+    // calibrate_slice for comparison
+    let single_result = direct_solver::calibrate_slice(&k_points, &w_market, &cfg);
+
+    assert_eq!(surface_results.len(), 1);
+    assert!(
+        (surface_results[0].theta - single_result.theta).abs() < 0.01,
+        "Surface theta {} should match single-slice theta {}",
+        surface_results[0].theta, single_result.theta
+    );
+    assert!(
+        (surface_results[0].sse - single_result.sse).abs() < 1e-8,
+        "Surface SSE {} should match single-slice SSE {}",
+        surface_results[0].sse, single_result.sse
+    );
+}
+
+#[test]
+fn test_calibrate_surface_empty() {
+    let slices: Vec<SliceInput> = vec![];
+    let cfg = DirectCalibConfig::default();
+    let results = direct_solver::calibrate_surface(&slices, &cfg);
+    assert_eq!(results.len(), 0, "Empty input should return empty results");
+}
+
+#[test]
+fn test_calibrate_surface_preserves_existing_behavior() {
+    // Verify calibrate_surface with one slice matches calibrate_slice exactly
+    let theta = 0.04;
+    let eta = 0.5;
+    let gamma = 0.5;
+    let rho = 0.0;
+
+    let k_slice = linspace(-0.5, 0.5, 21);
+    let w_market = ssvi::total_variance_slice(&k_slice, theta, eta, gamma, rho);
+
+    let cfg = DirectCalibConfig::default();
+
+    let direct_result = direct_solver::calibrate_slice(&k_slice, &w_market, &cfg);
+    let surface_result = direct_solver::calibrate_surface(
+        &[SliceInput { t: 1.0, k: &k_slice, w: &w_market }],
+        &cfg,
+    );
+
+    assert_eq!(surface_result.len(), 1);
+    assert!(
+        (surface_result[0].theta - direct_result.theta).abs() < 0.01,
+        "theta mismatch: surface={}, direct={}",
+        surface_result[0].theta, direct_result.theta
+    );
+    assert!(
+        (surface_result[0].sse - direct_result.sse).abs() < 1e-6,
+        "SSE mismatch: surface={}, direct={}",
+        surface_result[0].sse, direct_result.sse
     );
 }
