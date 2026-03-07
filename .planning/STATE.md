@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** Phase 4 - Binary Deduplication
+**Current focus:** Phase 5 - Test Migration
 
 ## Current Position
 
-Phase: 4 of 5 (Binary Deduplication)
+Phase: 5 of 5 (Test Migration)
 Plan: 0 of 0 in current phase
 Status: Ready to plan
-Last activity: 2026-03-07 -- Phase 3 (Calibration Config) completed
+Last activity: 2026-03-07 -- Phase 4 (Binary Deduplication) completed
 
-Progress: [######....] 60%
+Progress: [########..] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: ~1 min
 - Total execution time: <1 hour
 
@@ -30,9 +30,10 @@ Progress: [######....] 60%
 | 1. Module Restructuring | 1 | ~1 min | ~1 min |
 | 2. Error Types and Impl Blocks | 1 | ~1 min | ~1 min |
 | 3. Calibration Config | 1 | ~1 min | ~1 min |
+| 4. Binary Deduplication | 1 | ~1 min | ~1 min |
 
 **Recent Trend:**
-- Last 5 plans: Phase 1 Plan 1 (complete), Phase 2 Plan 1 (complete), Phase 3 Plan 1 (complete)
+- Last 5 plans: Phase 1 Plan 1 (complete), Phase 2 Plan 1 (complete), Phase 3 Plan 1 (complete), Phase 4 Plan 1 (complete)
 - Trend: on track
 
 *Updated after each plan completion*
@@ -53,6 +54,9 @@ Recent decisions affecting current work:
 - [Phase 3]: calibrate() and calibrate_with_calendar_penalty() now accept &CalibrationConfig instead of &NelderMeadConfig
 - [Phase 3]: solve_theta() accepts &CalibrationConfig for max_iter and tolerance
 - [Phase 3]: k_penalty and lambda remain caller-provided parameters (not embedded in CalibrationConfig) since they are surface-level concerns, not per-slice calibration knobs
+- [Phase 4]: Shared binary code placed in src/fit_common.rs as a library module (not src/bin/ directory module) because Cargo auto-discovers src/bin/*.rs as binary targets
+- [Phase 4]: FitResult uses a superset struct with calendar_violations and max_calendar_violation_bps defaulting to 0 for per-slice fits (avoids Option wrapping)
+- [Phase 4]: plot_fit accepts title as a &str parameter so each binary controls its own title format
 
 ### Pending Todos
 
@@ -65,5 +69,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Phase 3 complete, ready to plan Phase 4
+Stopped at: Phase 4 complete, ready to plan Phase 5
 Resume file: None
