@@ -1,178 +1,207 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-03-05
+**Analysis Date:** 2026-03-07
 
 ## Naming Patterns
 
 **Files:**
-- Snake_case for Rust source files: `ssvi.rs`, `nelder_mead.rs`, `brent.rs`, `calibration.rs`
-- Binary files in separate directory: `src/bin/report.rs`, `src/bin/check_eta.rs`
-- Test integration files follow module pattern: `tests/steep_skew.rs`
+- Use `snake_case.rs` for all source files: `nelder_mead.rs`, `fit_real.rs`, `steep_skew.rs`
+- Library modules: descriptive nouns (`ssvi`, `calibration`, `brent`, `nelder_mead`)
+- Binary entry points: verb-noun or descriptive (`report`, `fit_real`, `fit_real_surface`)
+- Test files: descriptive scenario names (`steep_skew.rs`)
+- Bench files: match the module being benchmarked (`calibration.rs`)
 
 **Functions:**
-- Snake_case for all function names: `phi()`, `total_variance()`, `solve_theta()`, `calibrate()`, `nelder_mead_bounded()`, `brent()`
-- Helper functions (private) also snake_case with leading underscore if non-public: `squared_error()` (private in `calibration.rs`)
-- Factory/builder functions prefixed with `make_`: `make_market_data()`, `make_sample_slice()`, `make_20pt_slice()`
-- Test helper functions follow same convention: `run_scenario()`, `run_calibration()`
+- Use `snake_case` for all functions: `solve_theta`, `total_variance`, `no_arbitrage_satisfied`
+- Pure math functions use short, domain-specific names: `phi`, `brent`, `project`
+- Constructor/factory functions use `make_` prefix: `make_sample_slice`, `make_market_data`, `make_steep_skew_slice`, `make_20pt_slice`
+- Fit/run functions use verb prefix: `run_scenario`, `fit_slice`, `run_calibration`
+- Plot functions use `plot_` prefix: `plot_fit`, `plot_heatmap`
 
 **Variables:**
-- Snake_case for all variables: `theta_star`, `w_market`, `k_slice`, `max_iv_err`, `rmse_iv`
-- Single letters acceptable for mathematical variables: `k` (log-moneyness), `w` (total variance), `f` (function value), `x` (optimization variable)
-- Boolean flags use descriptive names: `converged`, `mflag` (mathematical algorithm state)
-- Loop counters: `i`, `j` for nested loops
+- Mathematical variables follow paper notation: `eta`, `gamma`, `rho`, `theta`, `phi`, `k`, `w`
+- Compound math names use underscore: `theta_star`, `k_star`, `k_slice`, `w_market`, `w_fit`
+- Bounds use `lb`/`ub` prefix: `lb_eg`, `ub_eg`, `lb_3d`, `ub_3d`
+- Loop/temp variables: short names (`s`, `t`, `p`, `pk`, `fr`, `dk`)
+- Error metrics use descriptive names: `max_iv_err`, `rmse_iv`, `f_spread`, `x_spread`
+- Counters: `n_rho`, `n_dense`, `n_t`, `n_s`
 
-**Types:**
-- PascalCase for struct names: `NelderMeadConfig`, `NelderMeadResult`, `CalibrationInput`, `CalibrationResult`, `BrentResult`, `FitResult`, `Scenario`
-- All public structs derive `Debug` and `Clone`: `#[derive(Debug, Clone)]`
-- Field names follow snake_case: `k_slice`, `w_market`, `theta_star`, `max_iter`, `tol_f`, `converged`
+**Types/Structs:**
+- Use `PascalCase`: `CalibrationInput`, `CalibrationResult`, `NelderMeadConfig`, `NelderMeadResult`, `BrentResult`
+- Structs pair as Input/Result or Config/Result: `CalibrationInput`/`CalibrationResult`, `NelderMeadConfig`/`NelderMeadResult`
+- Binary-only structs: `Scenario`, `FitResult`, `SliceData`
 
-**Constants & Configuration:**
-- Numerical constants inline in functions, often using scientific notation: `1e-14`, `1e-15`, `1e-10`, `1e-3`
-- Configuration defaults in `impl Default` blocks: `NelderMeadConfig`, `NelderMeadResult`
-- Grid parameters hardcoded in functions: `n_rho = 20` for rho grid sweep in `calibrate()`
+**Constants:**
+- No named constants; numeric literals inline with comments explaining their meaning
+- Tolerances: `1e-12`, `1e-14`, `1e-15`, `1e-30`
+- Penalty values: `1e10` for infeasible objective returns
+- Bounds: `1e-6`, `2.0 - 1e-6`, `0.999`
 
 ## Code Style
 
 **Formatting:**
-- Standard Rust formatting conventions (inferred from code structure)
+- Default `rustfmt` settings (no `.rustfmt.toml` present)
 - 4-space indentation
-- No explicit rustfmt.toml file present
-- Lines typically under 100 characters
+- Trailing commas in struct literals and function arguments
+- Run `cargo fmt` before committing
 
 **Linting:**
-- No clippy configuration detected
-- Code assumes default Rust 2024 edition as declared in `Cargo.toml`
+- No `.clippy.toml` present; use default `cargo clippy` rules
+- No `#[allow(...)]` attributes used anywhere in the codebase
+
+**Edition:**
+- Rust 2024 edition (`edition = "2024"` in `Cargo.toml`)
 
 ## Import Organization
 
 **Order:**
-1. Standard library imports: `use std::fs;`, `use std::io::Write;`
-2. External crate imports: `use criterion::*;`, `use plotters::prelude::*;`
-3. Internal crate imports: `use crate::ssvi;`, `use crate::calibration::*;`, `use essvi::calibration::*;`
-4. Self imports for tests: `use super::*;`
+1. `crate::` imports (internal modules)
+2. External crate imports (`plotters`, `criterion`)
+3. `std::` imports
 
-**Path Aliases:**
-- No path alias configuration detected
-- Relative imports used: `crate::ssvi`, `crate::brent`, `super::*`
-- External package imports use full module paths: `essvi::calibration::CalibrationInput`, `essvi::ssvi`
-
-**Examples from codebase:**
+**Example from `src/bin/report.rs`:**
 ```rust
-// src/calibration.rs
-use crate::brent::brent;
-use crate::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMeadResult};
-use crate::ssvi;
-
-// src/bin/report.rs
 use essvi::calibration::{calibrate, CalibrationInput};
 use essvi::nelder_mead::NelderMeadConfig;
 use essvi::ssvi;
 use plotters::prelude::*;
 use std::fs;
 use std::io::Write;
-
-// In test modules
-use super::*;
 ```
+
+**Patterns:**
+- Import specific items from modules: `use crate::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMeadResult}`
+- Import module for namespaced access when many items used: `use crate::ssvi` then call `ssvi::phi(...)`, `ssvi::total_variance(...)`
+- Glob imports only for `plotters::prelude::*`
+- No path aliases configured
 
 ## Error Handling
 
-**Patterns:**
-- `Option<T>` used extensively for fallible operations: `solve_theta()` returns `Option<f64>`, `calibrate()` returns `Option<CalibrationResult>`
-- No explicit error types defined; uses idiomatic `Option` and `Result` patterns
-- Unwrap in test/benchmark code where failures indicate bugs: `.unwrap()` with comments explaining why
-- Match patterns to handle failures gracefully:
+**Library code (`src/`):**
+- Use `Option<T>` for computations that may fail: `solve_theta` returns `Option<f64>`, `calibrate` returns `Option<CalibrationResult>`
+- Return `None` for numerical failures (non-convergence, negative theta, zero derivative)
+- No `Result<T, E>` types in the library; no custom error types defined
+- Infeasible optimizer evaluations return a large penalty value (`1e10`) rather than failing
+
+**Pattern for fallible math:**
 ```rust
-// From calibration.rs
-let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
-    Some(t) => t,
-    None => return 1e10,  // Return penalty value for infeasible parameters
-};
+// From src/calibration.rs
+if theta <= 0.0 {
+    return None;
+}
+// ...
+if dw.abs() < 1e-30 {
+    return None;
+}
 ```
-- Constraint violations handled by returning large penalty values (1e10, 1e-10) rather than explicit error types
-- Early returns with `?` operator for `Option` unwrapping: `calibrate()` uses `calibrate(&input, &config)?;`
+
+**Binary code (`src/bin/`):**
+- Use `.expect("message")` for setup operations that must succeed
+- Use `match` on `Option` for calibration results, with `eprintln!` for failures
+- Use `Box<dyn std::error::Error>` return type for plot functions
+- Use `?` operator for chaining plotters operations
+
+**Pattern in binaries:**
+```rust
+// From src/bin/fit_real.rs
+match fit_slice(slice) {
+    Some(r) => { /* process */ }
+    None => {
+        eprintln!("Calibration FAILED for T={}", slice.t_expiry);
+    }
+}
+```
 
 ## Logging
 
-**Framework:** `println!` macros for output; no structured logging framework
+**Framework:** `println!` / `eprintln!` (no logging crate)
 
 **Patterns:**
-- Informational output in binary/test code: `println!()` and `eprintln!()` not present (uses `println!` only)
-- Report generation code prints detailed diagnostics:
-```rust
-// From tests/steep_skew.rs
-println!("\n==========================================================");
-println!("  {} (T = {})", label, t_expiry);
-println!("==========================================================");
-println!("  theta_star (ATM w) = {:.6e}", theta_star);
-```
-- Formatted output with alignment specifiers: `{:>8}`, `{:>10}`, `{:+10.6}`, `{:.6e}`, `{:.6}`
-- No logging in library code (`src/lib.rs`, `src/ssvi.rs`, etc.)
+- `println!` for progress output and results in binaries
+- `eprintln!` for error conditions in binaries
+- No logging in library code (`src/ssvi.rs`, `src/calibration.rs`, `src/nelder_mead.rs`, `src/brent.rs`)
+- Formatted numeric output uses `{:.Nf}`, `{:.Ne}`, `{:>N}` alignment specifiers
 
 ## Comments
 
 **When to Comment:**
-- Mathematical formulas documented with inline comments explaining notation
-- Complex algorithms preceded by explanation of steps
-- Non-obvious constraints explained: "No sign change — return midpoint as best guess"
-- Docstring-style comments for module-level documentation in some files
+- Every public function gets a `///` doc comment explaining its mathematical purpose
+- Mathematical equations rendered in comments using Unicode symbols and ASCII math notation
+- Section separators in binaries use `// -- Section Name --` with em-dash box-drawing characters
 
-**JSDoc/TSDoc:**
-- Not applicable (Rust project)
-- Documentation comments use `///` for public APIs:
+**Doc Comment Style:**
 ```rust
-/// SSVI model: φ function and total variance w(k, θ).
-/// φ(θ) = η / (θ^γ · (1+θ)^(1-γ))
+/// SSVI total variance for a single strike:
+/// w(k, theta) = (theta/2) * {1 + rho*phi(theta)*k + sqrt((phi(theta)*k + rho)^2 + (1 - rho^2))}
 #[inline]
-pub fn phi(theta: f64, eta: f64, gamma: f64) -> f64 { ... }
-
-/// Solve θ from the implicit ATM consistency equation...
-pub fn solve_theta(...) -> Option<f64> { ... }
+pub fn total_variance(k: f64, theta: f64, eta: f64, gamma: f64, rho: f64) -> f64 {
 ```
-- No inline `//` comments in mathematical code; formula documentation uses `///` blocks
+
+**Section markers in binaries:**
+```rust
+// -- Scenario parameters --
+// -- Plot generation --
+// -- Main --
+```
+
+**Test doc comments:** Tests use `///` comments to explain what the test verifies, especially for non-obvious mathematical properties.
 
 ## Function Design
 
 **Size:**
-- Typically 10-50 lines for utility functions
-- Larger functions (100+ lines) for complex algorithms like `nelder_mead_bounded()` (195 lines) and `brent()` (99 lines)
-- Small, focused optimization objectives defined as closures within functions:
-```rust
-let objective_2d = |x: &[f64]| -> f64 {
-    let eta = x[0];
-    let gamma = x[1];
-    // ... computation
-};
-```
+- Library functions are small and focused (5-30 lines typically)
+- Binary `main()` functions are longer (50-100 lines), orchestrating the full pipeline
+- Helper functions extracted for repeated patterns (`make_market_data`, `run_scenario`, `compute_fit_result`)
 
 **Parameters:**
-- All numeric computations pass f64 directly
-- Complex inputs wrapped in struct references: `&CalibrationInput`, `&NelderMeadConfig`
-- Slices for array data: `&[f64]` for k_slice and w_market
-- Closures for objective functions in optimizers: `F: Fn(&[f64]) -> f64` trait bounds
+- Use borrowed slices (`&[f64]`) for input data arrays
+- Use struct references for grouped parameters: `&CalibrationInput`, `&NelderMeadConfig`
+- Use `Option<&[f64]>` for optional parameters (e.g., `weights`)
+- Lifetime annotations with `'a` on input structs that borrow data: `CalibrationInput<'a>`
 
 **Return Values:**
-- `Option<T>` for potentially-failing operations
-- Struct return types for composite results: `NelderMeadResult`, `CalibrationResult`, `BrentResult`
-- Direct numeric returns for simple computations: `f64`
-- Vectors for batch operations: `Vec<f64>` from `total_variance_slice()`
+- `Option<T>` for fallible operations
+- `Vec<f64>` for computed arrays
+- Named result structs for multi-value returns: `CalibrationResult`, `NelderMeadResult`, `BrentResult`
+- `Result<(), Box<dyn std::error::Error>>` for I/O operations in binaries
+
+**Performance Annotations:**
+- `#[inline]` on small, hot math functions: `phi`, `total_variance`, `no_arbitrage_satisfied`, `project`
+- Closures for optimizer objectives (captured by reference)
 
 ## Module Design
 
 **Exports:**
-- Public modules declared at crate root in `src/lib.rs`: `pub mod ssvi;`, `pub mod calibration;`, `pub mod nelder_mead;`, `pub mod brent;`
-- Specific types and functions re-exported or accessed via module path: `essvi::calibration::calibrate()`, `essvi::ssvi::phi()`
-- Private functions use no visibility modifier (default private in Rust)
+- All library modules declared as `pub mod` in `src/lib.rs`
+- Public functions and structs use `pub` visibility
+- Internal helper functions are private (e.g., `weighted_squared_error`, `calendar_penalty`, `project`)
+- No re-exports or facade patterns
 
 **Barrel Files:**
-- Not used; `src/lib.rs` is minimal with only module declarations
-- Each module is directly importable: `use essvi::ssvi::*;` or `use essvi::calibration::CalibrationInput;`
+- `src/lib.rs` serves as the barrel file, exposing all four modules
+- No nested re-exports; consumers import from specific modules: `essvi::calibration::calibrate`
 
-**File Structure:**
-- One major concept per file: `ssvi.rs` contains SSVI formulas, `calibration.rs` contains calibration logic, `brent.rs` contains root-finding, `nelder_mead.rs` contains optimization
-- Tests colocated in modules using `#[cfg(test)] mod tests { ... }`
-- Integration tests in separate `tests/` directory for end-to-end scenarios
+**Module Boundaries:**
+- `ssvi` - pure math (SSVI formulas), no dependencies
+- `brent` - generic root-finding algorithm, no dependencies
+- `nelder_mead` - generic optimizer, no dependencies
+- `calibration` - orchestration layer, depends on `ssvi` and `nelder_mead`
+
+## Numeric Conventions
+
+**Tolerances:**
+- Convergence tolerance: `1e-12` (Nelder-Mead default for both `tol_f` and `tol_x`)
+- Newton method tolerance: `1e-14` (tight for `solve_theta`)
+- Near-zero guard: `1e-15` for `k_star`, `1e-30` for derivatives
+- Post-convergence relaxed check: `tol * 100.0`
+
+**Infeasible penalty:** Return `1e10` when constraints are violated inside an optimizer objective.
+
+**Parameter bounds:**
+- `eta` in `[1e-6, 2.0 - 1e-6]`
+- `gamma` in `[1e-6, 1.0 - 1e-6]`
+- `rho` in `[-0.999, 0.999]`
 
 ---
 
-*Convention analysis: 2026-03-05*
+*Convention analysis: 2026-03-07*

@@ -1,179 +1,144 @@
 # Architecture
 
-**Analysis Date:** 2026-03-05
+**Analysis Date:** 2026-03-07
 
 ## Pattern Overview
 
-**Overall:** Stochastic Volatility Inspired (SSVI) Volatility Model Library
-
-This is a mathematical modeling library implementing the SSVI parametric smile model for financial derivatives pricing. The architecture follows a layered, composable design where low-level numerical algorithms combine to form higher-level volatility modeling and calibration functionality.
+**Overall:** Domain-focused numerical library with layered computation pipeline
 
 **Key Characteristics:**
-- **Mathematical domain focus** — Models financial smile/skew across log-moneyness strikes
-- **Algorithm composition** — Root-finding and optimization primitives form building blocks for model calibration
-- **No-arbitrage constraints** — Enforces financial constraints during parameter optimization
-- **Implicit equation solving** — Uses numerical methods to eliminate equality constraints
-- **Grid-sweep + polishing** — Two-phase optimization to avoid local minima in high-dimensional parameter space
+- Pure Rust library crate (`lib.rs`) exposing four public modules for SSVI volatility surface calibration
+- Computation pipeline: SSVI model evaluation -> implicit theta solving -> derivative-free optimization -> calibration orchestration
+- Binary targets serve as report generators and demonstration tools, not as the primary interface
+- No external dependencies for core logic; `plotters` used only in binary targets for SVG output
+- All numerical algorithms implemented from scratch (Nelder-Mead, Brent's method) to maintain zero-dependency core
 
 ## Layers
 
-**Core Mathematical Model:**
-- Purpose: Implement the SSVI volatility parametrization equations
+**Model Layer (SSVI Formulas):**
+- Purpose: Evaluate the SSVI total variance formula and check no-arbitrage conditions
 - Location: `src/ssvi.rs`
-- Contains: Pure mathematical functions (phi, total_variance, no-arbitrage checking)
-- Depends on: None (pure Rust stdlib)
-- Used by: Calibration layer, reporting, tests
+- Contains: `phi()`, `total_variance()`, `total_variance_slice()`, `no_arbitrage_satisfied()`
+- Depends on: Nothing (leaf module, pure math)
+- Used by: `src/calibration.rs`, all binaries, all tests
 
-**Numerical Solvers:**
-- Purpose: Provide root-finding and unconstrained optimization primitives
-- Location: `src/brent.rs` (root-finding), `src/nelder_mead.rs` (function minimization)
-- Contains: Brent's bracketed root-finding method, bounded Nelder-Mead simplex optimizer
-- Depends on: None
-- Used by: Calibration layer
+**Numerical Solvers Layer:**
+- Purpose: Provide general-purpose numerical optimization and root-finding primitives
+- Location: `src/nelder_mead.rs`, `src/brent.rs`
+- Contains:
+  - `nelder_mead_bounded()` - Bounded Nelder-Mead simplex optimizer (derivative-free)
+  - `brent()` - Brent's method root finder (currently unused in production code but available)
+  - `NelderMeadConfig`, `NelderMeadResult`, `BrentResult` - Configuration and result structs
+- Depends on: Nothing (generic numerical algorithms)
+- Used by: `src/calibration.rs`
 
-**Calibration Engine:**
-- Purpose: Solve SSVI parameters from market volatility data
+**Calibration Layer:**
+- Purpose: Orchestrate SSVI parameter fitting against market data
 - Location: `src/calibration.rs`
-- Contains: `solve_theta()` for implicit ATM consistency, `calibrate()` for full parameter estimation
-- Depends on: `src/brent.rs`, `src/nelder_mead.rs`, `src/ssvi.rs`
-- Used by: Binary (reporting), tests, benchmarks
+- Contains:
+  - `solve_theta()` - Newton's method solver for the implicit ATM consistency equation
+  - `calibrate()` - Full per-slice calibration (rho-grid sweep + 2D Nelder-Mead + 3D polish)
+  - `calibrate_with_calendar_penalty()` - Surface calibration with cross-slice consistency penalty
+  - `CalibrationInput`, `CalibrationResult`, `PrevSlice` - Data structures
+  - `weighted_squared_error()` - Internal objective function helper
+- Depends on: `src/ssvi.rs`, `src/nelder_mead.rs`
+- Used by: All binary targets, integration tests, benchmarks
 
-**Reporting & Visualization:**
-- Purpose: Generate diagnostic plots and quality metrics across parameter grids
-- Location: `src/bin/report.rs`
-- Contains: Scenario generation, fit quality assessment, SVG plot generation using plotters
-- Depends on: All library modules
-- Used by: Command-line execution to create documentation
-
-**Testing & Benchmarking:**
-- Purpose: Validate correctness and measure performance
-- Location: `tests/steep_skew.rs`, `benches/calibration.rs`
-- Contains: Unit/integration tests in modules, criterion benchmarks
-- Depends on: Library modules
+**Binary Layer (Report Generators):**
+- Purpose: Generate fit quality reports with SVG plots and markdown output
+- Location: `src/bin/report.rs`, `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`
+- Contains: Synthetic market data generation, calibration invocation, SVG plotting, markdown report writing
+- Depends on: All library modules + `plotters` crate
+- Used by: Developer (run manually for analysis)
 
 ## Data Flow
 
-**Calibration Flow:**
+**Single-Slice Calibration (`calibrate()`):**
 
-1. **Input Stage** (`CalibrationInput`):
-   - Market data: `k_slice` (log-moneyness points), `w_market` (total variances)
-   - Constraints: `theta_star` (ATM total variance), `k_star` (ATM strike offset)
+1. Caller provides `CalibrationInput` containing log-moneyness slice `k_slice`, market total variances `w_market`, ATM reference point `(theta_star, k_star)`, and optional `weights`
+2. Outer loop sweeps rho from -0.95 to 0.95 in 21 steps
+3. For each rho, a 2D Nelder-Mead optimizes `(eta, gamma)` where the objective:
+   a. Checks no-arbitrage: `eta * (1 + |rho|) <= 2`
+   b. Solves theta implicitly via Newton iteration in `solve_theta()` (the ATM consistency equation `w(k*, theta) = theta*`)
+   c. Evaluates `weighted_squared_error()` between model and market total variances
+4. Best `(eta, gamma, rho)` from grid is polished with a 3D Nelder-Mead optimization
+5. Final `CalibrationResult` returned with fitted `(eta, gamma, rho, theta)` and optimizer diagnostics
 
-2. **Grid Search (Rho Sweep)**:
-   - For each ρ value in [-0.95, 0.95] (20 points):
-     - Inner optimization: Minimize squared error over (η, γ) using bounded Nelder-Mead
-     - For each (η, γ, ρ) candidate:
-       - Solve implicit equation θ = θ* / (1 + ρ·φ(θ)·k*) via Brent's method
-       - Compute model total variance `w_model` at all k points
-       - Calculate sum-of-squared-errors (SSE) vs market
-     - Track best (η, γ, ρ) and corresponding SSE
+**Surface Calibration (`calibrate_with_calendar_penalty()`):**
 
-3. **Polish Phase (3D Refinement)**:
-   - Restart Nelder-Mead from best grid point
-   - Optimize over full 3D space (η, γ, ρ) simultaneously
-   - Solve θ again for final parameter set
-   - Enforce no-arbitrage constraint: η·(1+|ρ|) ≤ 2
-
-4. **Output** (`CalibrationResult`):
-   - Calibrated parameters: η, γ, ρ, θ
-   - Optimizer convergence info: iterations, final SSE, convergence flag
+1. Slices are processed sequentially from shortest to longest expiry
+2. First slice uses unconstrained `calibrate()`
+3. Subsequent slices add a penalty term: `lambda * sum(max(0, w_prev(k) - w_cur(k))^2)` evaluated at sample k-points
+4. Initial guess comes from unconstrained per-slice fit
+5. Calendar arbitrage penalty enforces that total variance is non-decreasing in expiry at each k
 
 **State Management:**
-- State is **immutable functional** — each function takes inputs and returns outputs
-- No shared state between calibration runs
-- Simplex vertices in Nelder-Mead algorithm maintained locally during optimization
-- Brent's algorithm state (bracketing interval, function values) local to solver
+- No mutable global state; all computation is purely functional
+- `CalibrationInput` borrows market data (lifetime `'a`) to avoid copies
+- Nelder-Mead simplex is heap-allocated internally and returned as `Vec<f64>` in results
 
 ## Key Abstractions
 
-**SSVI Model:**
-- Purpose: Represent and compute volatility smiles using parametric form
-- Files: `src/ssvi.rs`
-- Pattern: Pure functions operating on parameters → volatility quantities
-- Key functions:
-  - `phi(θ, η, γ)` — Shape parameter, controls smile curvature relative to skew
-  - `total_variance(k, θ, η, γ, ρ)` — Model total variance at log-moneyness k
-  - `no_arbitrage_satisfied(η, ρ)` — Constraint check
+**CalibrationInput:**
+- Purpose: Encapsulates all market data needed for a single slice calibration
+- Examples: `src/calibration.rs` line 90-96
+- Pattern: Borrow-based struct with lifetime parameter to avoid data copying
 
-**Brent's Method:**
-- Purpose: Root-finding on bracketed intervals [a, b]
-- Files: `src/brent.rs`
-- Pattern: Generic function accepting closure f, returns `BrentResult` with convergence info
-- Used for: Solving implicit θ equation without closed-form solution
+**NelderMeadConfig / NelderMeadResult:**
+- Purpose: Configuration and output for the optimizer, decoupled from the specific optimization problem
+- Examples: `src/nelder_mead.rs` lines 4-34
+- Pattern: Builder-like with `Default` implementation for config; result struct captures convergence status
 
-**Nelder-Mead Optimizer:**
-- Purpose: Minimize function over bounded box [lb, ub]
-- Files: `src/nelder_mead.rs`
-- Pattern: Simplex-based derivative-free optimization, respects box constraints via projection
-- Configuration: `NelderMeadConfig` with convergence tolerances, reflection/expansion coefficients
-- Used for: Multi-dimensional parameter estimation in calibration
+**CalibrationResult:**
+- Purpose: Holds fitted SSVI parameters plus optimizer diagnostics
+- Examples: `src/calibration.rs` lines 98-105
+- Pattern: Flat struct containing both domain values (eta, gamma, rho, theta) and optimizer metadata
 
-**Calibration Input/Result:**
-- Purpose: Encapsulate calibration problem and solution
-- Pattern: Borrowed references for input (no copies), owned data for output
-- `CalibrationInput`: References to k_slice, w_market vectors + ATM constraint values
-- `CalibrationResult`: Owned parameter values + optimizer diagnostics
+**PrevSlice:**
+- Purpose: Carries fitted parameters from the previous expiry slice for calendar arbitrage penalty computation
+- Examples: `src/calibration.rs` lines 186-192
+- Pattern: Simple value struct, no references
 
 ## Entry Points
 
-**Library Entry (`src/lib.rs`):**
+**Library Entry (`lib.rs`):**
 - Location: `src/lib.rs`
-- Triggers: Used when imported as crate (e.g., in tests, benchmarks, external code)
-- Responsibilities: Module re-export (brent, calibration, nelder_mead, ssvi)
-- Public API: All four modules available for external use
+- Triggers: `use essvi::{ssvi, calibration, nelder_mead, brent}`
+- Responsibilities: Re-exports all four public modules
 
-**Binary Entry (`src/bin/report.rs`):**
+**`fit_real` Binary:**
+- Location: `src/bin/fit_real.rs`
+- Triggers: `cargo run --bin fit_real`
+- Responsibilities: Per-slice SSVI calibration on 12 synthetic market slices (approximating real equity index data), generates SVG plots and markdown report to `documents/`
+
+**`fit_real_surface` Binary:**
+- Location: `src/bin/fit_real_surface.rs`
+- Triggers: `cargo run --bin fit_real_surface`
+- Responsibilities: Two-step surface calibration (unconstrained then penalized), generates SVG plots and markdown report with calendar arbitrage analysis
+
+**`report` Binary:**
 - Location: `src/bin/report.rs`
 - Triggers: `cargo run --bin report`
-- Responsibilities:
-  1. Generate synthetic market data across parameter grids (T, skew slope)
-  2. Run calibration on each scenario
-  3. Compute fit quality metrics (max error, RMSE in implied vol)
-  4. Generate SVG plots for each fit
-  5. Create markdown report with constraint saturation analysis
-  6. Write to `documents/fit_quality_report.md` and `documents/plots/`
-
-**Test Entry (`tests/steep_skew.rs`):**
-- Location: `tests/steep_skew.rs`
-- Triggers: `cargo test steep_skew`
-- Responsibilities: Stress-test calibration with near-zero expiry and steep skew
-- Assertions: Convergence, maximum IV error bounds, parameter recovery
-
-**Benchmark Entry (`benches/calibration.rs`):**
-- Location: `benches/calibration.rs`
-- Triggers: `cargo bench`
-- Responsibilities: Measure performance of core operations
-- Benchmarks: 20-point calibration, theta solving, total variance batch computation
+- Responsibilities: Parameter grid sweep (T x slope), heatmap visualization, no-arbitrage constraint saturation analysis
 
 ## Error Handling
 
-**Strategy:** Option-based (no exceptions in Rust)
+**Strategy:** `Option`-based propagation for numerical failures; no custom error types
 
 **Patterns:**
-- `solve_theta()` returns `Option<f64>` — None if Brent's method fails or bracket has no sign change
-- `calibrate()` returns `Option<CalibrationResult>` — None if any inner solve_theta fails
-- Brent's method returns `BrentResult` with `converged: bool` flag (checked by caller)
-- Nelder-Mead always returns `NelderMeadResult` with `converged: bool` (no failure mode)
-- No-arbitrage violations: Objective function penalized with 1e10 (not error, just very high cost)
-- Invalid parameter ranges: Clamped by `project()` function in Nelder-Mead
+- `solve_theta()` returns `Option<f64>` -- `None` when Newton iteration diverges or theta goes non-positive
+- `calibrate()` and `calibrate_with_calendar_penalty()` return `Option<CalibrationResult>` -- `None` propagated from `solve_theta()` failure
+- Inside the Nelder-Mead objective function, numerical failures return a large penalty value (`1e10`) rather than propagating errors, keeping the optimizer running
+- Binary targets use `.expect()` / `unwrap()` for top-level calls, printing error messages for per-slice failures and continuing
 
 ## Cross-Cutting Concerns
 
-**Logging:** No explicit logging framework; information flows through:
-- Return values (Option, Result-like patterns)
-- Print statements in binary (`src/bin/report.rs`)
-- Test output for diagnostics
-
-**Validation:**
-- No-arbitrage constraint: Checked inline in objective function during calibration
-- Parameter bounds: η ∈ [1e-6, 2], γ ∈ [1e-6, 1), ρ ∈ [-0.999, 0.999]
-- Numerical stability: Explicit tolerance values (1e-14, 1e-12) in Brent and Nelder-Mead configs
-
-**Implicit Constraint Elimination:**
-- ATM consistency constraint (θ = θ* / (1 + ρ·φ(θ)·k*)) solved implicitly inside objective
-- Reduces 4D search to 3D (or 2D grid + 3D polish)
-- Guarantees constraint satisfaction in every candidate parameter set
+**Logging:** Console output via `println!`/`eprintln!` in binaries only; library code is silent
+**Validation:** No-arbitrage constraint checked inline within objective functions (`ssvi::no_arbitrage_satisfied()`); parameter bounds enforced via Nelder-Mead projection (`project()`)
+**Authentication:** Not applicable (pure computation library)
+**Serialization:** None; results are consumed in-process or written as markdown/SVG by binaries
+**Performance:** `#[inline]` annotations on hot-path model evaluation functions (`phi`, `total_variance`, `no_arbitrage_satisfied`, `project`)
 
 ---
 
-*Architecture analysis: 2026-03-05*
+*Architecture analysis: 2026-03-07*

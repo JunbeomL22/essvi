@@ -1,232 +1,187 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-05
+**Analysis Date:** 2026-03-07
 
 ## Directory Layout
 
 ```
 essvi/
-├── Cargo.toml              # Package manifest (Rust edition 2024, dependencies)
-├── Cargo.lock              # Dependency lock file
-├── README.md               # Minimal project readme
-├── .gitignore              # Git ignore patterns
-├── .planning/
-│   ├── PROJECT.md          # Project documentation
-│   └── codebase/           # Codebase analysis (this directory)
 ├── src/
-│   ├── lib.rs              # Library root (module declarations)
-│   ├── ssvi.rs             # SSVI volatility model mathematics
-│   ├── brent.rs            # Brent's root-finding algorithm
+│   ├── lib.rs              # Crate root: re-exports all public modules
+│   ├── ssvi.rs             # SSVI model formulas (phi, total_variance, no_arbitrage)
+│   ├── calibration.rs      # Calibration pipeline (solve_theta, calibrate, calendar penalty)
 │   ├── nelder_mead.rs      # Bounded Nelder-Mead optimizer
-│   ├── calibration.rs      # SSVI parameter calibration
+│   ├── brent.rs            # Brent's method root finder
 │   └── bin/
-│       └── report.rs       # Diagnostic report generator (binary)
+│       ├── report.rs       # Parameter grid sweep report generator
+│       ├── fit_real.rs     # Per-slice real-world-like data fitting
+│       └── fit_real_surface.rs  # Surface fit with calendar arbitrage penalty
 ├── tests/
-│   └── steep_skew.rs       # Stress test: near-zero expiry + steep skew
+│   └── steep_skew.rs       # Integration stress tests for steep skew regimes
 ├── benches/
-│   └── calibration.rs      # Performance benchmarks (criterion)
+│   └── calibration.rs      # Criterion benchmarks for all calibration paths
 ├── documents/
-│   ├── fit_quality_report.md    # Generated fit quality report
-│   ├── guideline.md             # Usage guidelines
-│   └── plots/                    # Generated SVG plots
-└── target/                 # Build artifacts (not committed)
+│   ├── plots/              # Generated SVG fit plots (~80 files)
+│   ├── fit_quality_report.md   # Grid sweep report output
+│   ├── real-world-fit.md       # Per-slice fit report output
+│   ├── real-world-surface-fit.md  # Surface fit report output
+│   ├── remedy.md           # Calendar arbitrage remedy notes
+│   ├── theta-calc.md       # Theta calculation derivation
+│   ├── guideline.md        # Project guidelines
+│   ├── real-data.png       # Reference market data screenshot
+│   ├── svi.pdf             # SVI reference paper
+│   └── robust-calibration.pdf  # Calibration reference paper
+├── .planning/
+│   ├── PROJECT.md          # Project definition and milestones
+│   └── codebase/           # Architecture/quality analysis documents (this directory)
+├── Cargo.toml              # Package manifest (edition 2024)
+├── Cargo.lock              # Dependency lockfile
+├── .gitignore              # Ignores /target only
+└── README.md               # Minimal placeholder
 ```
 
 ## Directory Purposes
 
 **`src/`:**
-- Purpose: Library source code (modules, core logic)
-- Contains: Rust source files (.rs) implementing numerical algorithms and volatility model
-- Key files: `lib.rs` (module root), `ssvi.rs`, `calibration.rs`, `brent.rs`, `nelder_mead.rs`
+- Purpose: All library source code (4 modules) and binary targets
+- Contains: Rust source files (`.rs`)
+- Key files: `lib.rs` (crate root), `calibration.rs` (largest module, 388 lines), `ssvi.rs` (core model)
 
 **`src/bin/`:**
-- Purpose: Standalone executable programs
-- Contains: Command-line binaries using the library
-- Key files: `report.rs` (generates diagnostic report and plots)
+- Purpose: Standalone binary executables for report generation and demonstration
+- Contains: Three binaries that import the library and produce markdown reports + SVG plots
+- Key files: `fit_real.rs` (per-slice fitting), `fit_real_surface.rs` (surface fitting with calendar penalty), `report.rs` (parameter grid analysis)
 
 **`tests/`:**
-- Purpose: Integration tests
-- Contains: Test files executed with `cargo test`
-- Key files: `steep_skew.rs` (stress tests for extreme parameter ranges)
+- Purpose: Integration tests that exercise the full calibration pipeline
+- Contains: Stress tests for extreme parameter regimes (steep skew, near-zero expiry)
+- Key files: `steep_skew.rs` (tests calibration across T=[1.0, 0.1, 0.01, 0.001])
 
 **`benches/`:**
-- Purpose: Performance benchmarks
-- Contains: Criterion benchmark definitions
-- Key files: `calibration.rs` (measures calibration speed, theta solving, batch variance computation)
+- Purpose: Performance benchmarks using Criterion
+- Contains: Benchmarks for `solve_theta`, `total_variance_slice`, per-slice calibration, and full 12-slice surface calibration
+- Key files: `calibration.rs`
 
 **`documents/`:**
-- Purpose: Generated documentation and plots
-- Contains: Markdown reports and SVG visualizations
-- Auto-generated: `fit_quality_report.md`, `plots/*.svg`
-- Pre-existing: `guideline.md`
+- Purpose: Reference materials, generated reports, and fit plots
+- Contains: PDF reference papers, markdown reports, PNG reference data, SVG plots
+- Key files: `guideline.md`, `fit_quality_report.md`, `real-world-fit.md`, `real-world-surface-fit.md`
+
+**`documents/plots/`:**
+- Purpose: Generated SVG visualizations of fit results
+- Contains: ~80 SVG files showing market data vs SSVI fit curves
+- Generated: Yes (by running binaries)
+- Committed: Yes
 
 **`.planning/`:**
-- Purpose: GSD planning and codebase analysis
-- Contains: Project documentation and codebase mapping
-- Key files: `PROJECT.md`, `codebase/*.md`
+- Purpose: Project planning and analysis documents
+- Contains: `PROJECT.md` (project definition, milestones, decisions), `codebase/` subdirectory for architecture docs
+- Generated: No (manually maintained)
+- Committed: Yes
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/lib.rs`: Library entry — declares and re-exports modules (brent, calibration, nelder_mead, ssvi)
-- `src/bin/report.rs`: Binary entry — generates full diagnostic report with plots
-- `tests/steep_skew.rs`: Test entry — integration tests with synthetic extreme scenarios
-- `benches/calibration.rs`: Benchmark entry — performance measurements
+- `src/lib.rs`: Crate root, declares public modules `brent`, `calibration`, `nelder_mead`, `ssvi`
+- `src/bin/report.rs`: Parameter grid sweep binary (run: `cargo run --bin report`)
+- `src/bin/fit_real.rs`: Per-slice fitting binary (run: `cargo run --bin fit_real`)
+- `src/bin/fit_real_surface.rs`: Surface fitting binary (run: `cargo run --bin fit_real_surface`)
 
 **Configuration:**
-- `Cargo.toml`: Rust package configuration (edition, dependencies: plotters, criterion)
-- `Cargo.lock`: Locked dependency versions
+- `Cargo.toml`: Package manifest -- edition 2024, single dependency `plotters 0.3`, dev-dependency `criterion 0.5`
+- No runtime configuration files; all parameters are hardcoded in source
 
 **Core Logic:**
-- `src/ssvi.rs`: SSVI mathematical model (phi function, total variance, no-arbitrage check)
-- `src/calibration.rs`: Parameter estimation (solve_theta implicit solver, grid-sweep + polish)
-- `src/brent.rs`: Root-finding algorithm
-- `src/nelder_mead.rs`: Bounded optimization algorithm
+- `src/ssvi.rs`: SSVI model -- `phi()`, `total_variance()`, `total_variance_slice()`, `no_arbitrage_satisfied()`
+- `src/calibration.rs`: Calibration pipeline -- `solve_theta()`, `calibrate()`, `calibrate_with_calendar_penalty()`, plus data structs `CalibrationInput`, `CalibrationResult`, `PrevSlice`
+- `src/nelder_mead.rs`: Bounded Nelder-Mead optimizer -- `nelder_mead_bounded()`, `NelderMeadConfig`, `NelderMeadResult`
+- `src/brent.rs`: Brent root finder -- `brent()`, `BrentResult`
 
 **Testing:**
-- `tests/steep_skew.rs`: Stress test validating calibration under extreme conditions
-- `benches/calibration.rs`: Performance benchmarks
-
-**Output:**
-- `documents/fit_quality_report.md`: Auto-generated report (parametric grid results, constraint saturation)
-- `documents/plots/fit_*.svg`: Auto-generated fit plots (market vs model)
+- `src/ssvi.rs` (inline `#[cfg(test)]` mod): Unit tests for phi, ATM total variance, no-arb check
+- `src/calibration.rs` (inline `#[cfg(test)]` mod): Unit tests for solve_theta, calibrate round-trip, no-arb enforcement
+- `src/nelder_mead.rs` (inline `#[cfg(test)]` mod): Rosenbrock 2D test, boundary solution test
+- `src/brent.rs` (inline `#[cfg(test)]` mod): sqrt(2) root finding, no-sign-change handling
+- `tests/steep_skew.rs`: Integration stress test across extreme parameter regimes
+- `benches/calibration.rs`: Criterion benchmarks for performance regression tracking
 
 ## Naming Conventions
 
 **Files:**
-- Library modules: lowercase with underscores — `ssvi.rs`, `brent.rs`, `nelder_mead.rs`, `calibration.rs`
-- Binary: `bin/report.rs`
-- Tests: descriptive snake_case — `steep_skew.rs`
-- Benchmarks: descriptive snake_case — `calibration.rs`
+- Library modules: `snake_case.rs` (e.g., `nelder_mead.rs`, `calibration.rs`)
+- Binary targets: `snake_case.rs` (e.g., `fit_real.rs`, `fit_real_surface.rs`)
+- Test files: `snake_case.rs` matching the feature under test (e.g., `steep_skew.rs`)
 
 **Directories:**
-- Standard Rust: `src/`, `tests/`, `benches/`, `target/`
-- Project-specific: `documents/` (reports, plots), `.planning/` (planning docs)
-- Generated: `documents/plots/` (SVG output), `target/debug/`, `target/release/`
-
-**Structs & Types:**
-- Configuration: `NelderMeadConfig`, `CalibrationInput`, `CalibrationResult`, `BrentResult`, `NelderMeadResult`
-- Case: PascalCase (standard Rust convention)
+- All lowercase: `src/`, `tests/`, `benches/`, `documents/`, `documents/plots/`
+- Standard Rust project layout (no custom directory patterns)
 
 **Functions:**
-- Case: snake_case (standard Rust convention)
-- Examples: `phi()`, `total_variance()`, `solve_theta()`, `calibrate()`, `brent()`, `nelder_mead_bounded()`
+- Public API: `snake_case` (e.g., `total_variance()`, `solve_theta()`, `calibrate()`, `nelder_mead_bounded()`)
+- Internal helpers: `snake_case` (e.g., `weighted_squared_error()`, `calendar_penalty()`, `project()`)
 
-**Modules:**
-- Case: lowercase (standard Rust convention)
-- Public re-exports in `lib.rs`: `pub mod brent;`, `pub mod calibration;`, etc.
+**Types:**
+- Structs: `PascalCase` (e.g., `CalibrationInput`, `NelderMeadConfig`, `CalibrationResult`, `PrevSlice`, `BrentResult`)
+- No enums, traits, or type aliases in the current codebase
+
+**Variables:**
+- Mathematical variables preserved from academic notation: `eta`, `gamma`, `rho`, `theta`, `phi`, `k`, `w`
+- Descriptive names for composite values: `theta_star`, `k_star`, `w_market`, `k_slice`, `no_arb_usage`
+- Loop counters and temporaries: `i`, `j`, `n`, `t`, `s`, `pk`, `dk`
 
 ## Where to Add New Code
 
-**New Feature (e.g., alternative volatility model):**
-- Primary code: `src/new_model.rs` (new module for model implementation)
-- Re-export: Add `pub mod new_model;` to `src/lib.rs`
-- Tests: Add test module within `src/new_model.rs` under `#[cfg(test)]`
-- Integration tests: Create `tests/test_new_model.rs` for cross-module validation
+**New Model (e.g., eSSVI):**
+- Create: `src/essvi.rs` (or `src/essvi_model.rs`) as a new module
+- Register in: `src/lib.rs` -- add `pub mod essvi_model;`
+- Follow pattern of: `src/ssvi.rs` -- pure functions, `#[inline]` on hot-path evaluators, `#[cfg(test)]` module at bottom
 
-**New Algorithm/Solver:**
-- Location: `src/algorithm_name.rs` (e.g., `src/gradient_descent.rs`)
-- Pattern: Follow Brent/Nelder-Mead structure: generic function, result struct with convergence info
-- Re-export: Add to `lib.rs`
-- Tests: Inline tests in same file (test against known problems: Rosenbrock, sqrt, etc.)
+**New Calibration Pipeline (e.g., eSSVI calibration):**
+- Create: `src/essvi_calibration.rs` (separate from existing `calibration.rs`)
+- Follow pattern of: `src/calibration.rs` -- `CalibrationInput`-like struct, `Option`-returning calibrate function, reuse `nelder_mead_bounded()`
+- Register in: `src/lib.rs`
 
-**New Optimization Objective (e.g., different calibration approach):**
-- Primary code: New function in `src/calibration.rs` (e.g., `calibrate_tikhonov()`)
-- Input: Extend or create companion struct (similar to `CalibrationInput`)
-- Output: Return `Option<CalibrationResult>` or new result type
-- Tests: Add test cases in `#[cfg(test)]` block within `calibration.rs`
+**New Binary (e.g., comparative report):**
+- Create: `src/bin/compare.rs` (or similar descriptive name)
+- Follow pattern of: `src/bin/report.rs` -- define data structs, run calibration, generate SVG plots via `plotters`, write markdown report
+- No Cargo.toml changes needed (Cargo auto-discovers `src/bin/*.rs`)
 
-**New Binary/CLI Tool:**
-- Location: `src/bin/tool_name.rs`
-- Dependencies: Import from library via `use essvi::*;`
-- Pattern: Follow `report.rs` structure (scenario generation, computation, output)
+**New Integration Test:**
+- Create: `tests/new_test_name.rs`
+- Follow pattern of: `tests/steep_skew.rs` -- import `essvi::calibration::*` and `essvi::ssvi`, use `#[test]` functions
+- No Cargo.toml changes needed (Cargo auto-discovers `tests/*.rs`)
 
-**Unit Tests:**
-- Location: Inline in same module, under `#[cfg(test)] mod tests { ... }`
-- Naming: Descriptive function names, `#[test]` attribute
-- Examples: `solve_theta_basic()`, `calibrate_recovers_parameters()`, `no_arb_enforced()`
+**New Benchmark:**
+- Add to: `benches/calibration.rs` -- define a new `bench_*` function, add to `criterion_group!`
+- Follow pattern of: existing bench functions that use `black_box()` for inputs
 
-**Integration Tests:**
-- Location: `tests/*.rs`
-- Naming: Descriptive file names matching test subject
-- Pattern: Test cross-module interactions (e.g., full calibration pipeline)
+**New Numerical Solver:**
+- Create: `src/solver_name.rs`
+- Register in: `src/lib.rs`
+- Follow pattern of: `src/brent.rs` or `src/nelder_mead.rs` -- generic function taking a closure, config struct with `Default`, result struct with convergence flag
 
-**Utilities/Helpers:**
-- Shared math utilities: Add as functions to relevant module (e.g., `ssvi.rs`)
-- Shared output/formatting: Create `src/output.rs` if needed
-- General helpers: Keep in existing modules, avoid separate util file unless >100 lines
+**Shared Utilities:**
+- Currently no dedicated utilities module exists
+- Small helpers live in the module that uses them (e.g., `weighted_squared_error()` in `calibration.rs`, `project()` in `nelder_mead.rs`)
+- If cross-module utilities are needed, create `src/utils.rs` and register in `src/lib.rs`
 
 ## Special Directories
 
 **`target/`:**
-- Purpose: Build artifacts (Rust compiled output)
-- Generated: Yes (created by cargo)
+- Purpose: Cargo build artifacts
+- Generated: Yes
 - Committed: No (in `.gitignore`)
-- Contents: `debug/` and `release/` with compiled binaries, dependencies, build metadata
 
 **`documents/plots/`:**
-- Purpose: Generated SVG plot outputs
-- Generated: Yes (created by `cargo run --bin report`)
-- Committed: Partially (many plots untracked)
-- Contents: `fit_*.svg` (fit quality plots), `heatmap_*.svg` (constraint analysis heatmaps)
+- Purpose: SVG fit visualizations generated by binaries
+- Generated: Yes (by `cargo run --bin fit_real`, `cargo run --bin fit_real_surface`, `cargo run --bin report`)
+- Committed: Yes (tracked in git for documentation purposes)
 
 **`.planning/codebase/`:**
-- Purpose: GSD codebase analysis documents
-- Generated: By GSD map-codebase command
+- Purpose: Architecture and quality analysis documents consumed by planning tools
+- Generated: Semi-automated (written by analysis agents)
 - Committed: Yes
-- Contents: `ARCHITECTURE.md`, `STRUCTURE.md` (this file), and related analysis documents
-
-## Code Organization Patterns
-
-**Module Structure (src/lib.rs):**
-```rust
-pub mod brent;        // Root finding
-pub mod calibration;  // Parameter estimation
-pub mod nelder_mead;  // Optimization
-pub mod ssvi;         // Volatility model
-```
-
-**Module Internal Structure (example: src/ssvi.rs):**
-```rust
-// 1. Imports (if any)
-use crate::other_module;
-
-// 2. Public API (functions, types)
-pub fn phi(theta: f64, eta: f64, gamma: f64) -> f64 { ... }
-pub fn total_variance(...) -> f64 { ... }
-pub fn no_arbitrage_satisfied(...) -> bool { ... }
-
-// 3. Private helpers (if any)
-fn helper_fn(...) { ... }
-
-// 4. Tests
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_name() { ... }
-}
-```
-
-**Binary Structure (example: src/bin/report.rs):**
-```rust
-// 1. Imports
-use essvi::*;
-use std::fs;
-
-// 2. Helper structs (Scenario, FitResult, etc.)
-struct Scenario { ... }
-struct FitResult { ... }
-
-// 3. Core functions (run_scenario, plot_fit, etc.)
-fn run_scenario(s: Scenario) -> Option<FitResult> { ... }
-fn plot_fit(result: &FitResult, path: &str) -> Result<(), Box<dyn std::error::Error>> { ... }
-
-// 4. Main entry
-fn main() { ... }
-```
 
 ---
 
-*Structure analysis: 2026-03-05*
+*Structure analysis: 2026-03-07*

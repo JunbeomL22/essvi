@@ -1,142 +1,96 @@
 # External Integrations
 
-**Analysis Date:** 2026-03-05
+**Analysis Date:** 2026-03-07
 
 ## APIs & External Services
 
-**None Detected** - This is a pure computational mathematics library with no external API integrations.
+**None.** This is a self-contained numerical library with no network calls, no API clients, and no external service dependencies.
 
 ## Data Storage
 
 **Databases:**
-- Not used - No database connectivity
+- None. No database of any kind.
 
 **File Storage:**
 - Local filesystem only
-  - Write operations: `src/bin/report.rs`
-    - Creates output directory: `fs::create_dir_all(plot_dir)`
-    - Writes markdown report: `fs::File::create(report_path)`
-    - Writes report bytes: `file.write_all(md.as_bytes())`
-  - No read operations from external sources
-  - No cloud storage integration
+  - Binaries write SVG plots to `documents/plots/`
+  - Binaries write Markdown reports to `documents/`
+  - Uses `std::fs` for all file I/O
 
 **Caching:**
-- None - No caching layer implemented
+- None
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Not applicable - Standalone library with no user management
+- Not applicable. No authentication of any kind.
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None - No error tracking service
+- None. Errors are handled via `Option<T>` return types and `eprintln!` for binary error output.
 
 **Logs:**
-- `println!` debugging available but not used in main library
-- Benchmark results logged to console via criterion
-- No persistent logging infrastructure
-
-**Metrics:**
-- criterion framework generates statistical metrics for benchmarks
-  - HTML reports saved to filesystem
-  - CSV data for manual analysis
+- `println!` / `eprintln!` in binaries only. No logging framework.
+- Library code uses no logging whatsoever; it returns `Option<CalibrationResult>`.
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not applicable - This is a library/tool, not a service
+- Not applicable. Library crate, not a deployed service.
 
 **CI Pipeline:**
-- Not detected - No GitHub Actions, GitLab CI, or similar
-
-**Build Output:**
-- Standalone Rust binary compiled via `cargo build --release`
-- Deployable as single executable to any target platform
+- None detected. No `.github/workflows/`, `.gitlab-ci.yml`, or similar CI configuration.
 
 ## Environment Configuration
 
 **Required env vars:**
-- None - All configuration is compile-time or runtime hardcoded
+- None. The library and binaries require no environment variables.
 
 **Secrets location:**
-- N/A - No secrets used or required
-
-**Example configuration (hardcoded in code):**
-```rust
-// From src/calibration.rs
-let config = NelderMeadConfig::default();
-// max_iter: 1000
-// tol_f: 1e-12
-// tol_x: 1e-12
-// alpha: 1.0, gamma: 2.0, rho: 0.5, sigma: 0.5
-```
+- Not applicable. No secrets, API keys, or credentials of any kind.
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- None - No HTTP server or webhook handlers
+- None
 
 **Outgoing:**
-- None - No external service callbacks
+- None
 
-## Network Configuration
+## Output Artifacts
 
-**HTTP/HTTPS:**
-- Not used - No network communication
+The only "integration" is filesystem output from the binaries:
 
-**TCP/UDP Sockets:**
-- Not used
+| Binary | Output Files | Format |
+|--------|-------------|--------|
+| `report` | `documents/fit_quality_report.md`, `documents/plots/fit_*.svg` | Markdown + SVG |
+| `fit_real` | `documents/real-world-fit.md`, `documents/plots/fit_real_T*.svg` | Markdown + SVG |
+| `fit_real_surface` | `documents/real-world-surface-fit.md`, `documents/plots/fit_surface_T*.svg` | Markdown + SVG |
 
-## Input/Output Patterns
+## Third-Party Library Integration
 
-**Input Sources:**
-- Programmatic: Function parameters in library API
-- Example from `src/bin/report.rs`:
-  - In-memory scenario data structures
-  - Market data generated from mathematical functions
-  - No external data ingestion
+**plotters 0.3:**
+- Used exclusively in `src/bin/report.rs`, `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`
+- SVGBackend for chart rendering (no bitmap/PNG output)
+- Not used in the library core (`src/lib.rs`, `src/ssvi.rs`, `src/calibration.rs`, etc.)
+- Patterns used: `ChartBuilder`, `LineSeries`, `Circle`, `SVGBackend`
 
-**Output Destinations:**
-- SVG files to filesystem (`documents/plots/`)
-- Markdown report file (`documents/fit_quality_report.md`)
-- Console output for benchmark statistics
+**criterion 0.5:**
+- Dev-dependency only, used in `benches/calibration.rs`
+- Benchmarks: `calibrate_20pt_slice`, `solve_theta`, `total_variance_20pt`, `surface_12_slices`
+- HTML reports enabled via feature flag
 
-## Data Format Conversions
+## Data Sources
 
-**Serialization:**
-- serde + serde_json (transitive via criterion)
-  - Only used internally by criterion for benchmark result storage
-  - No data exchange format for external systems
+All market data used by the binaries is **synthetic** (generated in-code):
+- `src/bin/fit_real.rs` - `build_market_slices()` generates 12 synthetic equity-index-like slices
+- `src/bin/fit_real_surface.rs` - Same synthetic data, different calibration approach
+- `src/bin/report.rs` - `make_market_data()` generates parametric smile data
+- No CSV/JSON/external data file parsing
 
-**Image Formats:**
-- SVG (vector graphics via plotters)
-- PNG/GIF support in image crate but not used
-
-## Library/Tool Dependencies Exposure
-
-**Public API (from `src/lib.rs`):**
-- `pub mod brent` - Root finding algorithm
-- `pub mod calibration` - SSVI parameter calibration
-- `pub mod nelder_mead` - Optimization algorithm
-- `pub mod ssvi` - Stochastic SVI volatility model
-
-**No external service integrations exposed to library users**
-
-## Edge Cases & Limitations
-
-**File System Assumption:**
-- Writable filesystem required at report generation time
-- `expect()` panic on write failures in `src/bin/report.rs`
-- No retry logic or fallback handling
-
-**Platform Dependencies:**
-- plotters requires platform-specific font rendering libraries
-  - macOS: Core Foundation, Core Graphics, Core Text
-  - Windows: dwrote (DirectWrite)
-  - Linux: freetype
+Reference materials exist in `documents/` (PDFs, PNGs) but are not read by any code.
 
 ---
 
-*Integration audit: 2026-03-05*
+*Integration audit: 2026-03-07*

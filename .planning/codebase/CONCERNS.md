@@ -1,178 +1,159 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-03-05
+**Analysis Date:** 2026-03-07
 
 ## Tech Debt
 
-**No-Arbitrage Constraint Saturation in SSVI Model:**
-- Issue: The SSVI no-arbitrage condition `eta * (1 + |rho|) <= 2` acts as a hard boundary that severely limits the model's ability to fit steep skew scenarios. When this constraint becomes saturated (approaches 2.0), the optimizer is constrained and fit quality degrades significantly. This is a fundamental limitation of the SSVI model that cannot be solved within the current architecture.
-- Files: `src/ssvi.rs`, `src/calibration.rs` (lines 88-90, 114-116)
-- Impact: For short-expiry (T < 0.1) and steep-skew markets (slope > 0.5), the model cannot produce the required skew intensity while maintaining no-arbitrage. Calibration succeeds but produces suboptimal fits with high IV errors, particularly on the put side (negative k).
-- Fix approach: This is not a bug but a model limitation. Options: (1) accept the constraint and document maximum applicable market scenarios; (2) explore alternative smile models (e.g., SVI, WSVI) that don't have this constraint; (3) add pre-flight validation to reject inputs that would require saturation.
+**Massive code duplication across binaries:**
+- Issue: `SliceData` struct, `make_slice()`, `build_market_slices()`, `FitResult` struct, `plot_fit()`, and weighting logic are copy-pasted across `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`, and `src/bin/report.rs`. The `make_slice()` function alone is ~35 lines duplicated verbatim between `fit_real.rs` (lines 60-104) and `fit_real_surface.rs` (lines 24-58). `build_market_slices()` is duplicated identically. `plot_fit()` is near-identical across all three binaries with only minor title string differences.
+- Files: `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`, `src/bin/report.rs`
+- Impact: Any bug fix or improvement to slice generation, plotting, or fit-result computation must be applied in three places. Divergence risk is high -- `fit_real_surface.rs` already has extra fields (`calendar_violations`, `max_calendar_violation_bps`) while the other two do not, making it easy for shared logic to drift apart silently.
+- Fix approach: Extract shared types and functions into a library module (e.g., `src/market_data.rs` for `SliceData`, `make_slice`, `build_market_slices`; `src/plotting.rs` for `plot_fit`; `src/fit_result.rs` for `FitResult` and `compute_fit_result`). Binaries should import from the library.
 
-**Implicit Theta Solver Convergence Risk:**
-- Issue: The `solve_theta()` function in `src/calibration.rs` (lines 10-39) uses Brent's method to solve the implicit ATM consistency equation. If the root-finding algorithm fails to converge, it returns `None`, which propagates as calibration failure. The bracketing interval `[theta_star/1000, 100*theta_star]` is hardcoded and may not contain the root in edge cases.
-- Files: `src/calibration.rs` (lines 10-39, 31-33)
-- Impact: Calibration can fail silently for certain parameter combinations, particularly with non-zero `k_star` values where the functional form is more complex. No diagnostic information is provided about why the solver failed.
-- Fix approach: (1) Add logging/diagnostics to report solver failures; (2) make bracket bounds adaptive based on input parameters; (3) try multiple bracket strategies before giving up; (4) consider analytical solutions for special cases (e.g., `k_star=0`).
+**`plotters` is a non-dev dependency used only in binaries:**
+- Issue: The `plotters` crate (line 7 of `Cargo.toml`) is listed as a regular dependency, but it is only used in `src/bin/*.rs` for report generation. Any downstream consumer of the `essvi` library crate will pull in `plotters` and its transitive dependencies (including font rendering, image codecs, etc.) even if they only need the calibration math.
+- Files: `Cargo.toml` (line 7), `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`, `src/bin/report.rs`
+- Impact: Unnecessarily inflated compile times and dependency tree for library users. The core library (`src/lib.rs`) has zero dependencies, which is a strength that gets undermined by bundling `plotters` unconditionally.
+- Fix approach: Move `plotters` behind a cargo feature flag (e.g., `[features] plotting = ["plotters"]`) and gate the binaries on that feature, or simply move plotting into a separate workspace member/crate.
 
-**Hard-Coded Tolerance and Iteration Limits:**
-- Issue: Tolerances for Brent root-finding (`1e-14` in line 33 of `src/calibration.rs`) and Nelder-Mead optimization (`tol_f: 1e-12, tol_x: 1e-12` in `src/nelder_mead.rs` line 18-19) are fixed. These may be too tight for some problems and too loose for others, with no way to tune them without modifying source code.
-- Files: `src/calibration.rs` (line 33), `src/nelder_mead.rs` (line 18-19)
-- Impact: Users cannot control optimizer behavior without recompilation. Convergence time is unpredictable and could timeout on resource-constrained systems.
-- Fix approach: Expose tolerance parameters through `NelderMeadConfig` and `solve_theta()` as optional arguments. Consider adaptive tolerancing based on problem scale.
+**No custom error type -- `Option<T>` used as the sole error signaling mechanism:**
+- Issue: `calibrate()` and `calibrate_with_calendar_penalty()` return `Option<CalibrationResult>`. `solve_theta()` returns `Option<f64>`. When calibration fails, the caller gets `None` with zero diagnostic information -- no indication of whether failure was due to no-arbitrage constraint violation, Newton divergence, boundary saturation, or max iterations exceeded.
+- Files: `src/calibration.rs` (lines 112, 174, 209, 244)
+- Impact: Debugging calibration failures in production requires guesswork. The `fit_real_surface.rs` binary (line 310) calls `.expect("first slice must calibrate")` which will panic with no useful context if the first slice fails.
+- Fix approach: Define a `CalibrationError` enum with variants like `NewtonDivergence`, `NoArbitrageSaturation`, `MaxIterations`, `InvalidInput`. Return `Result<CalibrationResult, CalibrationError>` instead of `Option`.
 
-**Numerical Instability in Phi Function:**
-- Issue: The `phi()` function in `src/ssvi.rs` (line 6) computes `eta / (theta.powf(gamma) * (1.0 + theta).powf(1.0 - gamma))`. With very small theta (< 1e-6) or gamma near 1.0, the denominator can underflow or overflow. Additionally, `(1.0 + theta).powf(1.0 - gamma)` when gamma approaches 1.0 becomes nearly 1, leading to loss of significance.
-- Files: `src/ssvi.rs` (line 5-7)
-- Impact: Implied volatility calculations become unreliable for very short expiries or extreme parameter combinations. No validation guards against these edge cases.
-- Fix approach: (1) Add input validation to ensure theta and gamma are in safe ranges; (2) use log-space computation for phi to avoid underflow: `phi = exp(log(eta) - gamma*log(theta) - (1-gamma)*log(1+theta))`; (3) add numerical gradient checks in tests.
-
-**Grid Search Rho Sweep Not Adaptive:**
-- Issue: The calibration algorithm in `src/calibration.rs` (lines 81-106) uses a fixed 20-point grid sweep over rho from -0.95 to 0.95. This is coarse and may miss the optimal rho value if it falls between grid points. The grid is not scaled based on the problem's sensitivity to rho.
-- Files: `src/calibration.rs` (lines 79-106)
-- Impact: Initial guess for 3D polishing optimization may be suboptimal, leading to longer convergence time or convergence to local minima. Performance degrades for problems where rho is highly sensitive.
-- Fix approach: (1) Increase grid resolution; (2) use adaptive coarse-then-fine grid refinement; (3) replace grid search with direct 3D Nelder-Mead from a well-chosen initial point; (4) compute gradient of objective w.r.t. rho to guide search direction.
+**Magic numbers scattered throughout calibration code:**
+- Issue: Numerical constants like `1e10` (penalty for infeasible points), `1e-6` (parameter bounds), `1e-14` (Newton tolerance), `1e-30` (derivative guard), `1e-15` (k_star threshold), `0.05` (initial simplex perturbation factor), `20` (rho grid points), `100.0` (calendar penalty lambda), and `3.0` / `1.0` (ATM/wing weights) appear as bare literals without named constants or documentation of why those specific values were chosen.
+- Files: `src/calibration.rs` (lines 24, 30, 52, 113-114, 120, 129, 167-168), `src/nelder_mead.rs` (lines 63-66), `src/bin/fit_real.rs` (lines 132-133), `src/bin/fit_real_surface.rs` (lines 233, 247-249, 296-297)
+- Impact: Difficult to tune or understand the sensitivity of the calibration to these choices. Someone modifying the rho grid density (currently 20 steps) has no way to know if this is a carefully tested value or an arbitrary choice.
+- Fix approach: Define named constants with doc comments explaining the rationale, or promote them to `NelderMeadConfig`/`CalibrationConfig` fields with documented defaults.
 
 ## Known Bugs
 
-**Brent's Method Returns Midpoint on No Sign Change:**
-- Issue: In `src/brent.rs` (lines 18-24), when the function has no sign change in [a,b], the algorithm returns the midpoint as a "best guess" rather than reporting convergence failure clearly. This can mask the underlying problem and produce misleading results.
-- Files: `src/brent.rs` (lines 18-24)
-- Impact: If the bracketing interval is chosen incorrectly, the solver will return an arbitrary midpoint instead of explicitly failing. Callers cannot distinguish between convergence and failure without checking `.converged` flag.
-- Fix approach: This behavior is acceptable for root-finding, but callers must always check `.converged`. Document this clearly in API docs. Consider stricter assertion in calibration when solver claims convergence but fit is poor.
+**NaN propagation causes panic in Nelder-Mead sort:**
+- Symptoms: `partial_cmp().unwrap()` on line 82 of `src/nelder_mead.rs` will panic if any function evaluation returns `NaN`. Since `f64::NAN.partial_cmp(&_)` returns `None`, the `.unwrap()` panics.
+- Files: `src/nelder_mead.rs` (line 82)
+- Trigger: If the objective function returns `NaN` (possible when `theta.powf(gamma)` receives negative theta due to floating point drift, or when `disc.sqrt()` receives a negative discriminant due to `rho` very close to +/-1), the simplex sort panics instead of recovering gracefully.
+- Workaround: The objective functions in `src/calibration.rs` return `1e10` for invalid parameters, which prevents most NaN paths. But edge cases with extreme parameter values during simplex operations could still reach this panic.
 
-**Unbounded Simplex Expansion in Nelder-Mead:**
-- Issue: In `src/nelder_mead.rs` (lines 136-148), the expansion step can push the solution outside the bounds if the expanded point `xe` lands far outside [lb, ub]. The `project()` function clamps it back (line 139), but this can waste iterations and slow convergence.
-- Files: `src/nelder_mead.rs` (lines 136-148)
-- Impact: Convergence to solutions on the boundary may be unnecessarily slow. The simplex shape can become degenerate.
-- Fix approach: Apply box-constraints more intelligently during expansion: limit expansion magnitude to avoid projection clipping, or use constrained expansion formulas.
+**`solve_theta` Newton iteration can overshoot to negative theta without guard:**
+- Symptoms: Newton update `theta -= residual / dw` at line 56 of `src/calibration.rs` can produce negative `theta`. The guard at line 33 (`if theta <= 0.0 { return None }`) catches this, but only at the start of the next iteration. Between the update and the guard, the negative theta is not used -- but the function returns `None` rather than attempting recovery (e.g., bisection fallback).
+- Files: `src/calibration.rs` (lines 33, 56-57)
+- Trigger: Very steep skews or near-zero `theta_star` values where the Newton step overshoots.
+- Workaround: The calibration objective catches `None` and returns `1e10`, so the optimizer avoids these regions. But it means the optimizer may fail to explore valid parameter space near the boundary.
 
 ## Security Considerations
 
-**No Input Validation on Market Data:**
-- Issue: Calibration functions `calibrate()` in `src/calibration.rs` accept slices of market total variances without validating that values are positive, finite, or reasonable.
-- Files: `src/calibration.rs` (lines 72-142)
-- Impact: NaN or infinite values in market data will silently propagate through calculations, producing meaningless calibration results. No early error detection.
-- Fix approach: Add precondition checks: ensure all `w_market` values are finite and positive; validate `theta_star > 0` and `k_star` is finite; clip data to reasonable bounds or reject with error.
-
-**No Bounds Checking in Total Variance Calculations:**
-- Issue: The `total_variance()` function in `src/ssvi.rs` (line 12-17) computes discriminant `(pk + rho).powi(2) + (1.0 - rho*rho)` without verifying that the square root argument is non-negative. While mathematically guaranteed by construction (discriminant is always ≥ 0 for |rho| ≤ 1), floating-point errors could push it negative.
-- Files: `src/ssvi.rs` (lines 12-17)
-- Impact: If rho approaches 1.0 or 1+rho is computed with rounding error, the discriminant could be slightly negative, causing `.sqrt()` to return NaN. No guard against this.
-- Fix approach: Add assertion or clamp: `disc = disc.max(0.0)` before sqrt. Add tests with rho very close to 1.0.
+**No security-relevant attack surface:**
+- Risk: This is a pure numerical computation library with no network, filesystem (beyond binaries writing reports), or user input handling. No secrets, authentication, or external service calls.
+- Files: N/A
+- Current mitigation: N/A
+- Recommendations: If this library is ever exposed via a web API, validate input array lengths (prevent excessive allocations from huge `k_slice` arrays) and add timeouts on calibration calls (Nelder-Mead with `max_iter=1000` and 21 rho grid points runs ~21000 inner optimizer iterations per `calibrate` call).
 
 ## Performance Bottlenecks
 
-**Excessive Function Evaluations in Nelder-Mead:**
-- Issue: The Nelder-Mead optimizer in `src/nelder_mead.rs` re-computes the objective function for every candidate point without caching. In the calibration pipeline, this means `phi()`, `solve_theta()`, and `total_variance_slice()` are called repeatedly. The `phi()` function itself uses `.powf()` which is slow.
-- Files: `src/nelder_mead.rs` (lines 73, 126, 140, 157, 169, 184), `src/calibration.rs` (lines 101, 129)
-- Impact: For a 2D (eta, gamma) optimization with typical Nelder-Mead convergence of ~50-200 iterations, combined with 20 rho grid points, the optimizer evaluates the objective 1000-4000 times. Each evaluation calls `solve_theta()` which itself runs Brent's method (~30-50 iterations). Total: ~40,000-200,000 function evaluations. This is slow for interactive use.
-- Fix approach: (1) Use analytical gradients to switch to gradient-based optimization (L-BFGS); (2) cache phi computations in a lookup table; (3) parallelize rho grid sweep across threads; (4) use approximate Hessian from optimizer history to reduce iterations.
+**Rho grid sweep performs 21 independent 2D optimizations sequentially:**
+- Problem: `calibrate()` in `src/calibration.rs` (lines 119-146) runs a Nelder-Mead optimization for each of 21 rho grid points. Each 2D optimization runs up to 1000 iterations, each calling `solve_theta` (up to 20 Newton steps) plus `total_variance_slice`. This is the dominant cost of calibration.
+- Files: `src/calibration.rs` (lines 119-146)
+- Cause: Serial loop over rho grid with no parallelism. Each rho grid point is fully independent.
+- Improvement path: Use `rayon::par_iter` to parallelize the rho grid sweep. The objective closure captures only `&input` (shared reference) so parallelism is straightforward. Expected ~4-8x speedup on multicore machines for single-slice calibration.
 
-**Inefficient Phi Computation via Powf:**
-- Issue: Computing `eta.powf(gamma)` and `(1.0 + theta).powf(1.0 - gamma)` uses general exponentiation which is slower than specialized functions. For frequently-computed values, this accumulates.
-- Files: `src/ssvi.rs` (line 6)
-- Impact: Each `phi()` call involves two `powf()` operations, each ~50-100 CPU cycles. Millions of calls in a calibration run add measurable latency.
-- Fix approach: (1) Pre-compute phi for a grid of (theta, eta, gamma) values and interpolate; (2) use log-space representation to convert powers to multiplies; (3) profile to determine if this is actually the bottleneck before optimizing.
+**Surface calibration doubles the work by re-running unconstrained fit as initial guess:**
+- Problem: In `src/bin/fit_real_surface.rs` (line 132) and `benches/calibration.rs` (line 132), the surface calibration first runs a full unconstrained `calibrate()` to get an initial guess, then runs `calibrate_with_calendar_penalty()` starting from that guess. This doubles the wall time for every slice after the first.
+- Files: `src/bin/fit_real_surface.rs` (lines 258-283, 286-339), `benches/calibration.rs` (lines 128-134)
+- Cause: `calibrate_with_calendar_penalty()` does not include its own rho grid sweep -- it takes an initial point and runs a single 3D Nelder-Mead. The unconstrained fit provides that initial point.
+- Improvement path: Cache unconstrained results rather than recomputing them in the surface pass (the binary already does this), or add rho grid sweep to `calibrate_with_calendar_penalty()` itself.
 
-**Memory Allocation in Simplex Operations:**
-- Issue: The Nelder-Mead implementation in `src/nelder_mead.rs` allocates `Vec<Vec<f64>>` for the simplex and clones the entire simplex (line 83) on each iteration to sort it. For 3D optimization, this involves copying 4 vectors of 3 elements each, repeated 50-200 times.
-- Files: `src/nelder_mead.rs` (lines 83-86)
-- Impact: Unnecessary allocations and copies. Heap fragmentation and cache misses.
-- Fix approach: (1) Use stack arrays for small problems (dim <= 10); (2) sort in-place using index vector rather than cloning; (3) use SmallVec for fixed-size simplices.
+**Heap allocations in hot loop (total_variance_slice returns Vec):**
+- Problem: `ssvi::total_variance_slice()` allocates a new `Vec<f64>` on every call. During calibration, this function is called inside the Nelder-Mead objective, which itself runs inside a 21-point rho sweep. Total: ~21 * 1000 * 1 = ~21,000 heap allocations per `calibrate()` call.
+- Files: `src/ssvi.rs` (lines 20-31)
+- Cause: The function signature returns `Vec<f64>` rather than writing into a pre-allocated buffer.
+- Improvement path: Add `total_variance_slice_into(k_slice: &[f64], ..., out: &mut [f64])` that writes into a caller-provided buffer, reused across iterations. The objective closure in `calibrate()` could hold a single `Vec<f64>` buffer.
 
 ## Fragile Areas
 
-**Calibration Success Criteria Lack Rigor:**
-- Issue: The `calibrate()` function in `src/calibration.rs` (lines 72-142) returns `Some(CalibrationResult)` whenever the final Nelder-Mead optimization completes, regardless of whether the result is actually good. There is no post-hoc validation that the fit is reasonable (e.g., checking max error, parameter bounds, or no-arbitrage saturation).
-- Files: `src/calibration.rs` (lines 134-142)
-- Impact: A calibration can return "success" with a fit error of 1e-8 (excellent) or 0.1 (terrible) with no way to distinguish. Consumers of the API can unknowingly use bad fits. The `no_arbitrage_satisfied()` check is done during optimization but not on the final result.
-- Fix approach: (1) Add optional post-optimization validation step; (2) return additional metadata in `CalibrationResult` (fit error, constraint saturation level); (3) add convenience method `is_good_fit(tolerance)` that checks error magnitude; (4) raise warnings or return `Err` when constraints are saturated.
+**Nelder-Mead parameter naming collision with SSVI model parameters:**
+- Files: `src/nelder_mead.rs` (lines 4-12)
+- Why fragile: `NelderMeadConfig` uses field names `gamma`, `rho`, and `sigma` -- identical to SSVI model parameters (gamma, rho) and the implied volatility symbol (sigma). This creates constant cognitive overhead and high risk of confusion when reading calibration code that uses both `config.rho` (contraction coefficient = 0.5) and the SSVI `rho` (skew parameter in [-1, 1]).
+- Safe modification: Rename Nelder-Mead config fields to their standard textbook names with prefixes: `nm_alpha`, `nm_gamma`, `nm_rho`, `nm_sigma` -- or use the less common but unambiguous names like `contraction`, `expansion`, `reflection`, `shrink`.
+- Test coverage: Adequate (Rosenbrock and boundary tests), but renaming would not break the API since it is a config struct.
 
-**Test Assertions Too Strict on Synthetic Data:**
-- Issue: Tests in `src/calibration.rs` (lines 206-207, 251-252) assert that recovered SSE is < 1e-20 or 1e-18, which are unrealistically tight tolerances. These tests pass only for synthetic noise-free data. Real market data will never fit this well, making the tests misleading about production performance.
-- Files: `src/calibration.rs` (lines 206-207, 251-252)
-- Impact: Tests pass locally but code may fail with real data. No confidence that the algorithm handles realistic noise.
-- Fix approach: (1) Add noise to synthetic data in tests; (2) use relative error thresholds instead of absolute; (3) add separate stress tests with realistic market scenarios (from `tests/steep_skew.rs`); (4) document acceptable tolerance ranges for real data.
+**ATM identification in binaries uses midpoint index, not actual ATM:**
+- Files: `src/bin/fit_real.rs` (lines 128-130), `src/bin/fit_real_surface.rs` (lines 243-245)
+- Why fragile: `slice.k[slice.k.len() / 2]` assumes the midpoint of the k-array is near ATM (k=0). If the k-array is not centered around zero (which is the case -- many slices have asymmetric ranges like `[-0.55, 0.45]`), the "ATM" reference point is biased. The midpoint of 60 points spanning `[-0.55, 0.45]` is `k ~ -0.05`, not `k=0`.
+- Safe modification: Find the k-point closest to 0.0, or interpolate to get the exact ATM total variance at k=0.
+- Test coverage: No test verifies that theta_star/k_star are correctly identified from market data.
 
-**Plot Generation Assumes Data Properties:**
-- Issue: In `src/bin/report.rs` (lines 116-125), the plot generation uses `.first()` and `.last()` with fallback values, but assumes k_slice is sorted and non-empty. If market data has outliers or gaps, the plot axis scaling (lines 124-125) uses `fold()` to find min/max, which is inefficient and could overflow with extreme values.
-- Files: `src/bin/report.rs` (lines 116-125)
-- Impact: Edge cases (unsorted data, NaN values, empty slices) produce misleading visualizations. Plot axes may be scaled incorrectly if outliers are present.
-- Fix approach: (1) Validate input data before plotting; (2) use quantile-based axis scaling (e.g., 5th-95th percentile) instead of min-max to handle outliers; (3) use iterator methods more efficiently (`.min_by`, `.max_by`).
-
-**Hard-Coded Scenario Parameters in Report:**
-- Issue: The report generation in `src/bin/report.rs` (lines 269-275) has hard-coded test scenarios with fixed T, slope, and ATM vol values. To test different market conditions, users must edit and recompile the binary.
-- Files: `src/bin/report.rs` (lines 269-277)
-- Impact: Report is not reusable for different market regimes. Cannot be integrated into automated testing or used as a library.
-- Fix approach: (1) Move scenario parameters to command-line arguments or config file; (2) make report generation a public library function in lib.rs; (3) support reading market data from CSV or JSON.
+**No input validation on calibration inputs:**
+- Files: `src/calibration.rs` (lines 90-96, 112)
+- Why fragile: `CalibrationInput` does not validate that `k_slice` and `w_market` have the same length, that `w_market` values are positive, or that `weights` (if provided) matches the slice length. Mismatched lengths would produce silent incorrect results via `zip` (truncating to the shorter length).
+- Safe modification: Add assertions or return `Err` for mismatched lengths at the start of `calibrate()`.
+- Test coverage: No test with mismatched input lengths.
 
 ## Scaling Limits
 
-**Rho Grid Sweep Becomes Slow with High-Dimensional Problems:**
-- Issue: The current 20-point rho grid (line 80 in `src/calibration.rs`) scales linearly with the number of outer iterations. If the algorithm is extended to calibrate multiple slices or parameters, the cost multiplies.
-- Files: `src/calibration.rs` (lines 79-106)
-- Impact: Calibrating an entire volatility surface (20+ time slices) would require 20*20 = 400 calibrations, each doing 20-iteration rho sweep, resulting in thousands of objective evaluations.
-- Scaling path: (1) Make rho grid resolution configurable; (2) use faster grid search (e.g., ternary search) instead of linear scan; (3) parallelize over rho values; (4) for surface calibration, use previous slice's rho as warm-start.
-
-**Simplex Dimension Grows Cubically with Problem Size:**
-- Issue: Nelder-Mead simplex has n+1 vertices where n is dimension. For 3D calibration (eta, gamma, rho), the simplex is 4 vertices. Extending to calibrate more parameters (e.g., theta directly, or multiple SSVI components) rapidly increases cost.
-- Files: `src/nelder_mead.rs` (lines 53-71)
-- Impact: 10D optimization requires a 11-vertex simplex with 11 function evaluations per iteration. Convergence becomes exponentially slower.
-- Scaling path: (1) Use gradient-based methods (L-BFGS) instead of simplex for higher dimensions; (2) use coordinate descent or alternating optimization if structure allows; (3) reduce problem dimension via constraints or parameterization.
+**Single-threaded calibration limits throughput:**
+- Current capacity: ~400 single-slice calibrations per second (based on benchmark: ~2.5ms per 20-point slice). A 12-slice surface fit takes ~90ms.
+- Limit: For real-time pricing with hundreds of underlyings each having 10-20 expiry slices, serial calibration would require ~0.5-1 second per underlying, which is too slow for live trading.
+- Scaling path: Parallelize rho grid sweep with `rayon`, and parallelize independent slice calibrations across underlyings. The code is already free of global mutable state, making this straightforward.
 
 ## Dependencies at Risk
 
-**Plotters Dependency for Simple Plotting:**
-- Risk: The crate depends on `plotters = "0.3"` for SVG generation. Plotters is a heavy dependency (~200KB) with many transitive dependencies. SVG generation is relatively simple and could be done with minimal code.
-- Files: `Cargo.toml` (line 6), `src/bin/report.rs`
-- Impact: Increased compilation time, larger binary, potential security vulnerabilities in upstream deps. If plotters is abandoned or has breaking changes, the reporting feature breaks.
-- Migration plan: (1) For MVP, use hand-written SVG templates with data interpolation (10-20 lines of code); (2) for production, evaluate `plotly.rs` or `gnuplot` integration; (3) or keep plotters but use `optional` feature flag.
+**`plotters` crate as the sole visualization dependency:**
+- Risk: Low severity. `plotters` is well-maintained but adds significant compile-time cost. It is only used in binaries, not the library.
+- Impact: No impact on core library functionality. Binary compile times increase.
+- Migration plan: Already addressed in tech debt above (feature-gate it).
+
+**Rust edition 2024 requirement:**
+- Risk: `Cargo.toml` specifies `edition = "2024"`, which requires Rust 1.85+. Users on older stable toolchains cannot compile this crate.
+- Impact: Limits adoption. Edition 2024 provides no features that this codebase uses that are unavailable in edition 2021.
+- Migration plan: Consider downgrading to `edition = "2021"` unless edition-2024-specific features are intentionally used.
 
 ## Missing Critical Features
 
-**No Error Reporting Mechanism:**
-- Problem: Calibration failures return `None` with no indication of what went wrong. Was it: bracket failure, non-convergence, invalid input, or numerical instability?
-- Blocks: Debugging production failures; building robust user-facing error messages; automated failure triage.
-- Fix: Replace `Option<CalibrationResult>` with `Result<CalibrationResult, CalibrationError>` enum. Document each error variant.
+**No support for reading real market data:**
+- Problem: All binaries use hardcoded synthetic data via `make_slice()` with deterministic pseudo-noise. There is no CSV/JSON reader, no market data adapter, and no way to calibrate to actual exchange-traded option prices without writing a new binary.
+- Blocks: Cannot validate the model against real market data without first building a data ingestion pipeline.
 
-**No Confidence Intervals or Uncertainty Estimates:**
-- Problem: The calibration returns point estimates (eta, gamma, rho) but no measure of how uncertain these estimates are. For a poorly-constrained problem or noisy data, the estimates could have high variance.
-- Blocks: Risk quantification; parameter sensitivity analysis; intelligent fallback strategies.
-- Fix: Compute Hessian at optimum to estimate parameter covariance. Return confidence regions with results.
+**No butterfly/calendar arbitrage verification as a post-calibration check:**
+- Problem: The no-arbitrage condition `eta * (1 + |rho|) <= 2` is checked during calibration as a constraint, but the full butterfly arbitrage condition (non-negative probability density) is never verified. Calendar arbitrage is checked only in `fit_real_surface.rs` at 21 discrete k-points, not as a continuous guarantee.
+- Blocks: Cannot certify that calibrated parameters produce an arbitrage-free surface. The discrete check can miss narrow violations between sample points.
 
-**No Warm-Start or Incremental Calibration:**
-- Problem: Each calibration starts from scratch with default initial simplex. If calibrating time-adjacent market slices, parameters should change smoothly, but the algorithm doesn't exploit this.
-- Blocks: Rapid re-calibration; real-time volatility surface updates.
-- Fix: Accept optional previous-fit as warm-start. Initialize simplex around previous solution.
+**No implied volatility to/from option price conversion:**
+- Problem: The library operates entirely in total-variance space. There is no Black-Scholes pricer, no IV solver (despite `brent.rs` existing), and no forward/discount factor handling. Converting between implied volatility and option prices must be done externally.
+- Blocks: Cannot be used as a standalone pricing/calibration tool without an external Black-Scholes implementation.
+
+**`brent.rs` is unused in the codebase:**
+- Problem: `src/brent.rs` implements Brent's root-finding method and is exported via `src/lib.rs`, but it is never imported or called anywhere in the library or binaries. It appears to have been written for future IV solving but is currently dead code.
+- Files: `src/brent.rs`, `src/lib.rs` (line 1)
+- Blocks: Nothing -- but it adds maintenance burden and may mislead users into thinking it is used internally.
 
 ## Test Coverage Gaps
 
-**No Integration Tests with Real Market Data:**
-- What's not tested: How the algorithm performs on actual equity options data with noise, bid-ask spreads, and outliers. Only synthetic noise-free scenarios are tested.
-- Files: `src/calibration.rs` (test module), `tests/steep_skew.rs`
-- Risk: Code may fail silently or produce poor fits on production data. Test suite provides false confidence.
+**No tests for `calibrate_with_calendar_penalty()`:**
+- What's not tested: The calendar-penalized calibration function has zero unit tests. It is only exercised indirectly by the `fit_real_surface` binary and the benchmark.
+- Files: `src/calibration.rs` (lines 209-253)
+- Risk: Regressions in the calendar penalty logic (e.g., sign errors in the penalty term, lambda scaling issues) would go undetected. The function has a different calling convention than `calibrate()` (takes `init` parameter, no rho grid sweep) and its correctness depends on the penalty function working correctly.
 - Priority: High
 
-**Limited Edge Case Coverage for Input Validation:**
-- What's not tested: Behavior with NaN/Inf market data, zero variance values, empty slices, very large parameter values, degenerate input (all k_slice values identical).
-- Files: `src/calibration.rs` (lines 72-142), `src/ssvi.rs` (lines 12-17)
-- Risk: Undefined behavior or crashes on malformed input.
+**No tests for edge cases in numerical routines:**
+- What's not tested: `solve_theta` with extreme inputs (very large theta_star, very small theta_star near machine epsilon, rho near +/-1, gamma near 0 or 1). `nelder_mead_bounded` with degenerate bounds (lb == ub), zero-dimensional input, or NaN-producing objectives. `brent` with functions that have roots at the boundary endpoints.
+- Files: `src/calibration.rs`, `src/nelder_mead.rs`, `src/brent.rs`
+- Risk: Numerical failures in production with real market data that exercises parameter corners not covered by synthetic test data. The steep_skew test (`tests/steep_skew.rs`) is good but does not assert on parameter recovery, only that calibration succeeds.
 - Priority: High
 
-**No Stress Tests for Extreme Parameters:**
-- What's not tested: Calibration with very small T (< 0.001), very large skew (slope > 2.0), extreme ATM vols (0.01 or 2.0), rho very close to ±1.
-- Files: `src/calibration.rs`, `src/ssvi.rs`
-- Risk: Algorithm may silently produce nonsense results (NaN, Inf, negative variance) that only appear in downstream analytics.
+**No tests for binary logic (`src/bin/*.rs`):**
+- What's not tested: ATM identification (midpoint assumption), weight construction, IV-to-total-variance conversion, fit error computation, report generation, plot generation.
+- Files: `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`, `src/bin/report.rs`
+- Risk: Medium -- these are report-generation tools, not production code. But the ATM identification bug (midpoint != ATM) affects calibration quality.
 - Priority: Medium
 
-**No Benchmark Coverage for Performance Regression:**
-- What's not tested: Total runtime of calibration; sensitivity to problem size; memory usage. Benches exist in `benches/calibration.rs` but are minimal.
-- Files: `benches/calibration.rs`
-- Risk: Performance regressions are not caught in CI. Algorithm changes may introduce O(n²) overhead undetected.
+**No property-based or fuzz testing:**
+- What's not tested: Random parameter combinations that might trigger NaN, infinity, or panic in the numerical routines.
+- Files: All `src/*.rs`
+- Risk: Undiscovered edge cases in floating-point arithmetic. The `partial_cmp().unwrap()` panic in Nelder-Mead (line 82 of `src/nelder_mead.rs`) is a known example of a defect that property-based testing would likely find.
 - Priority: Medium
 
 ---
 
-*Concerns audit: 2026-03-05*
+*Concerns audit: 2026-03-07*

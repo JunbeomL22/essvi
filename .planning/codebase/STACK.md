@@ -1,108 +1,91 @@
 # Technology Stack
 
-**Analysis Date:** 2026-03-05
+**Analysis Date:** 2026-03-07
 
 ## Languages
 
 **Primary:**
-- Rust 1.93.0 - All source code and binaries
-  - Edition: 2024
+- Rust (edition 2024) - All library code, binaries, tests, and benchmarks
+
+**Secondary:**
+- None
 
 ## Runtime
 
 **Environment:**
-- Rust toolchain 1.93.0 (rustc + cargo)
-- Cargo 1.93.0 - Package manager and build system
-- Lockfile: `Cargo.lock` (present)
+- rustc 1.93.0 (254b59607 2026-01-19)
+- No `rust-toolchain.toml` present; depends on system-installed nightly/stable
+
+**Package Manager:**
+- Cargo 1.93.0 (083ac5135 2025-12-15)
+- Lockfile: `Cargo.lock` present and committed
 
 ## Frameworks
 
 **Core:**
-- None - Pure Rust library with no web/application frameworks
+- No web/application framework. This is a pure numerical/scientific Rust library.
 
-**Visualization:**
-- plotters 0.3.7 - Charts, graphs, and SVG rendering
-  - SVG backend for plot output
-  - Used in: `src/bin/report.rs` for generating fit quality visualizations
+**Testing:**
+- Built-in `#[cfg(test)]` / `#[test]` - Unit tests co-located in source modules
+- Integration tests in `tests/` directory
+- criterion 0.5 (with `html_reports` feature) - Benchmarking framework
 
-**Testing & Benchmarking:**
-- criterion 0.5.1 - Statistical benchmarking framework
-  - Features: HTML report generation (`html_reports` feature enabled)
-  - Benchmark runner config: `[[bench]]` harness = false
-  - Used in: `benches/calibration.rs`
-
-**Build:**
-- Cargo - Standard Rust build system
+**Build/Dev:**
+- Cargo (standard Rust build system) - Build, test, bench, run binaries
 
 ## Key Dependencies
 
 **Critical:**
-- plotters 0.3.7 - Generates SVG plots and heatmaps
-  - Includes: chrono, font-kit, image, num-traits, lazy_static
-  - Used by: `SVGBackend`, `ChartBuilder` in report generation
-- criterion 0.5.1 - Performance benchmarking with statistical analysis
-  - Includes: rayon (parallel), serde (serialization), plotters (report plots)
+- plotters 0.3 - SVG chart generation for fit quality reports and visualization. Used in all three binaries (`src/bin/report.rs`, `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`) to produce implied volatility fit plots.
 
-**Transitive (plotters ecosystem):**
-- image 0.25.6 - Image processing for plot generation
-- chrono 0.4.44 - Date/time handling (plot timestamps)
-- font-kit 0.14.3 - Font rendering for chart labels
-- num-traits - Numerical trait abstractions
-- rayon (via criterion) - Data parallelism for benchmarks
+**Dev/Bench:**
+- criterion 0.5 - Performance benchmarking for calibration routines. Config: `benches/calibration.rs`, harness disabled via `[[bench]]` in `Cargo.toml`.
 
-**Infrastructure:**
-- No external service dependencies (no http, database, async runtime)
-- Pure mathematical computation with local file I/O
+**Zero external numerical dependencies:**
+- All numerical algorithms (Nelder-Mead optimizer, Brent root finding, Newton solver, SSVI model) are implemented from scratch in the library. No dependency on nalgebra, ndarray, or similar.
 
 ## Configuration
 
 **Environment:**
-- No `.env` files - Zero environment configuration
-- Runtime configuration is hardcoded in source code
-  - Example: `NelderMeadConfig::default()` in `src/calibration.rs`
+- No `.env` files. No runtime configuration files.
+- No environment variables consumed at runtime.
+- All parameters are hardcoded in source or passed as function arguments.
 
 **Build:**
-- `Cargo.toml` - Manifest with dependencies and bench configuration
-  - Package name: essvi
-  - Version: 0.1.0
-  - Workspace: Single package
+- `Cargo.toml` - Package manifest and dependency specification
+- No `.rustfmt.toml`, `clippy.toml`, or `rust-toolchain.toml` present
+- `.gitignore` contains only `/target`
 
-**Profiles:**
-- Default profiles (debug/release) - No custom optimization settings
+## Binaries
+
+Three standalone binaries defined in `src/bin/`:
+
+| Binary | Source | Purpose |
+|--------|--------|---------|
+| `report` | `src/bin/report.rs` | Parameter grid sweep: T x skew slope fit quality report |
+| `fit_real` | `src/bin/fit_real.rs` | Per-slice SSVI fit to synthetic market data (12 expiries) |
+| `fit_real_surface` | `src/bin/fit_real_surface.rs` | Surface fit with calendar arbitrage penalty |
+
+Run with:
+```bash
+cargo run --bin report
+cargo run --bin fit_real
+cargo run --bin fit_real_surface
+```
+
+All binaries write output to `documents/plots/` (SVG files) and `documents/` (Markdown reports).
 
 ## Platform Requirements
 
 **Development:**
-- Rust 1.93.0+ (or specified edition 2024 compatible versions)
-- Standard C build tools (cc crate for native compilation)
-- Platform-specific font libraries (Core Text on macOS, dwrote on Windows, freetype on Linux)
+- Rust 1.93.0+ (edition 2024 features required)
+- No OS-specific dependencies; pure Rust with no C/FFI bindings
+- No GPU or SIMD requirements
 
 **Production:**
-- Standalone binary - No runtime dependencies beyond system libc
-- Compiled to native machine code
-- Cross-platform: Linux, macOS, Windows (via plotters platform abstraction)
-
-## Compilation
-
-**Binary Targets:**
-- Library: `essvi` - Core SSVI calibration algorithms
-  - Located: `src/lib.rs`
-- Binary: `report` - Report generation tool
-  - Located: `src/bin/report.rs`
-  - Callable: `cargo run --bin report`
-
-**Benchmark Suite:**
-- `calibration` benchmark in `benches/calibration.rs`
-- Run: `cargo bench`
-
-## Standard Library Usage
-
-Heavy reliance on:
-- `std::fs` - File I/O (create directories, write files)
-- `std::io::Write` - Buffered writing for reports
-- Built-in numeric operations (f64 math)
-- Memory management (no unsafe code detected)
+- Library crate (`essvi`) - embeddable in any Rust project
+- No deployment target; this is a library + CLI toolset, not a service
 
 ---
 
-*Stack analysis: 2026-03-05*
+*Stack analysis: 2026-03-07*

@@ -1,305 +1,205 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-03-05
+**Analysis Date:** 2026-03-07
 
 ## Test Framework
 
 **Runner:**
-- `cargo test` - Native Rust test framework built-in to Cargo
-- Edition: 2024 (declared in `Cargo.toml`)
+- Built-in Rust test framework (`#[cfg(test)]` + `#[test]`)
+- No additional test harness dependencies for unit/integration tests
+- Config: None (default `cargo test` behavior)
 
 **Assertion Library:**
-- Built-in `assert!()`, `assert_eq!()`, `assert!()` macros
-- No external assertion library; uses Rust standard assertions
+- Standard `assert!`, `assert_eq!`, `assert_ne!` macros
+- Custom floating-point tolerance checks via `assert!((value - expected).abs() < tol)`
+
+**Benchmark Framework:**
+- Criterion 0.5 with `html_reports` feature
+- Config: `Cargo.toml` `[[bench]]` section, `harness = false`
 
 **Run Commands:**
 ```bash
-cargo test                    # Run all unit and integration tests
-cargo test --lib             # Run library tests only
-cargo test --test '*'        # Run integration tests
-cargo test --release         # Run tests in release mode
-cargo bench                   # Run benchmarks via criterion
-cargo test -- --nocapture    # Show println! output during tests
+cargo test                    # Run all unit + integration tests
+cargo test -- --nocapture     # Run with stdout visible (for diagnostic prints)
+cargo test steep_skew         # Run specific test module/function
+cargo bench                   # Run all benchmarks (Criterion)
+cargo bench -- calibrate      # Run specific benchmark
 ```
 
 ## Test File Organization
 
 **Location:**
-- Unit tests colocated with source code using `#[cfg(test)] mod tests { ... }`
-- Integration tests in separate `tests/` directory at crate root
-- Benchmark code in `benches/` directory
+- Unit tests: co-located in source files via `#[cfg(test)] mod tests { ... }`
+- Integration tests: `tests/` directory (standard Rust convention)
+- Benchmarks: `benches/` directory
 
 **Naming:**
-- Unit test modules named `tests` within each source file
-- Integration test file: `tests/steep_skew.rs`
-- Benchmark file: `benches/calibration.rs`
-- Individual test functions prefixed with module-like naming: `#[test]` attribute indicates test
+- Unit test modules: always `mod tests` inside `#[cfg(test)]`
+- Integration test files: descriptive scenario name (`steep_skew.rs`)
+- Benchmark files: match the module under test (`calibration.rs`)
 
 **Structure:**
 ```
-essvi/
-├── src/
-│   ├── lib.rs          # Module declarations only
-│   ├── ssvi.rs         # SSVI functions + inline #[cfg(test)] mod tests
-│   ├── calibration.rs  # Calibration logic + inline #[cfg(test)] mod tests
-│   ├── brent.rs        # Root finder + inline #[cfg(test)] mod tests
-│   ├── nelder_mead.rs  # Optimizer + inline #[cfg(test)] mod tests
-│   └── bin/
-│       └── report.rs   # Binary for report generation (not tested)
-├── tests/
-│   └── steep_skew.rs   # Integration test: stress test with steep skew scenarios
-└── benches/
-    └── calibration.rs  # Criterion benchmarks
+src/
+  ssvi.rs           # Contains #[cfg(test)] mod tests (3 unit tests)
+  calibration.rs    # Contains #[cfg(test)] mod tests (5 unit tests)
+  nelder_mead.rs    # Contains #[cfg(test)] mod tests (2 unit tests)
+  brent.rs          # Contains #[cfg(test)] mod tests (2 unit tests)
+tests/
+  steep_skew.rs     # Integration test (2 tests): stress-test calibration
+benches/
+  calibration.rs    # Criterion benchmarks (4 bench functions)
 ```
 
 ## Test Structure
 
-**Suite Organization:**
+**Unit Test Organization:**
 ```rust
-// Pattern from src/ssvi.rs
+// From src/calibration.rs
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn phi_basic() {
-        // Arrange - setup inputs
-        // Act - call function
-        // Assert - verify result
+    /// Helper: generate synthetic data from known parameters.
+    fn make_sample_slice() -> (Vec<f64>, Vec<f64>, f64, f64) {
+        // ... build test fixtures inline
     }
 
     #[test]
-    fn atm_total_variance() {
-        // Test another specific case
+    fn solve_theta_basic() {
+        // Test degenerate/simple case first
+        let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.0);
+        assert!(theta.is_some());
+        let t = theta.unwrap();
+        assert!((t - 0.04).abs() < 1e-10);
+    }
+
+    #[test]
+    fn calibrate_recovers_parameters() {
+        // Round-trip test: generate from known params, calibrate back
+        let (k_slice, w_market, theta_star, k_star) = make_sample_slice();
+        // ... calibrate and assert recovery
     }
 }
 ```
 
 **Patterns:**
-- Setup via local variables and helper functions
-- No explicit teardown needed (functions are pure)
-- Helper functions defined within test module: `make_sample_slice()` in `calibration.rs` tests
-- Tests organized by functional area, not alphabetically
+- Each test function verifies one property or scenario
+- Helper functions build test data inline (no external fixtures)
+- Tests progress from simple/degenerate cases to complex scenarios
+- Round-trip testing: generate synthetic data from known parameters, calibrate, verify recovery
+
+**Assertion Patterns for Floating-Point:**
+```rust
+// Absolute tolerance check
+assert!((value - expected).abs() < 1e-12);
+
+// Relative tolerance check
+assert!(
+    (recovered_phi - true_phi).abs() / true_phi < 1e-3,
+    "phi: {} vs true {}", recovered_phi, true_phi
+);
+
+// Residual magnitude check
+assert!(res.optimizer.f < 1e-20, "residual too large: {}", res.optimizer.f);
+
+// Boolean property check
+assert!(res.optimizer.converged, "optimizer did not converge");
+assert!(ssvi::no_arbitrage_satisfied(res.eta, res.rho));
+```
+
+**Custom assertion messages:** Always include diagnostic values in assertion messages using `format!` arguments:
+```rust
+assert!((w - 0.04).abs() < 1e-12, "w={}, theta*=0.04, diff={}", w, (w - 0.04).abs());
+assert!(res.optimizer.f < 1e-18, "residual: {}", res.optimizer.f);
+```
+
+## Integration Tests
+
+**Location:** `tests/steep_skew.rs`
+
+**Pattern:** Stress-test the full calibration pipeline under extreme conditions.
+
+```rust
+// From tests/steep_skew.rs
+use essvi::calibration::{calibrate, CalibrationInput};
+use essvi::nelder_mead::NelderMeadConfig;
+use essvi::ssvi;
+
+fn make_steep_skew_slice(t_expiry: f64) -> (Vec<f64>, Vec<f64>, f64) {
+    // Build synthetic market data with extreme parameters
+}
+
+#[test]
+fn steep_skew_stress_test() {
+    // Test across multiple expiries from 1Y down to near-zero
+    let expiries = [1.0, 0.1, 0.01, 0.001];
+    for &t in &expiries {
+        run_calibration("Steep skew", t);
+    }
+}
+
+#[test]
+fn steep_skew_fit_quality() {
+    // Quantitative assertions for each regime
+    let expiries = [1.0, 0.1, 0.01, 0.001];
+    for &t in &expiries {
+        // ... calibrate and check fit quality
+        assert!(res.is_some(), "calibration failed at T={}", t);
+    }
+}
+```
+
+**Integration test characteristics:**
+- Import the crate as an external consumer: `use essvi::calibration::...`
+- Test across parameter sweeps (multiple expiries, slopes)
+- Include diagnostic `println!` output (visible with `--nocapture`)
+- One test for visual/diagnostic output, one for quantitative assertions
 
 ## Mocking
 
-**Framework:** None used
+**Framework:** None
 
-**Patterns:**
-- No explicit mocking framework (mockito, etc.) used
-- Pure functions make mocking unnecessary
-- Test data generated synthetically:
-```rust
-// From calibration.rs tests
-fn make_sample_slice() -> (Vec<f64>, Vec<f64>, f64, f64) {
-    let true_eta = 0.8;
-    let true_gamma = 0.4;
-    let true_rho = -0.35;
-    let theta_star = 0.04;
-    let k_star = -0.01;
+**What to Mock:** Nothing -- the codebase is pure numerical computation with no external dependencies, I/O, or side effects in library code.
 
-    let true_theta = solve_theta(true_eta, true_gamma, true_rho, theta_star, k_star)
-        .expect("true theta must solve");
-
-    let k_slice: Vec<f64> = (0..20).map(|i| -0.5 + (i as f64) / 19.0).collect();
-    let w_market = ssvi::total_variance_slice(&k_slice, true_theta, true_eta, true_gamma, true_rho);
-
-    (k_slice, w_market, theta_star, k_star)
-}
-```
-
-**What to Mock:**
-- Nothing in current codebase; all functions are pure mathematical functions
-
-**What NOT to Mock:**
-- All core computational functions should be tested directly
-- Mathematical results are deterministic and verifiable
+**Testing strategy instead of mocking:**
+- Generate synthetic data from known parameters (round-trip testing)
+- Use well-known mathematical functions as test cases (Rosenbrock for optimizer, sqrt(2) for root finder)
+- Verify mathematical properties (no-arbitrage condition, ATM consistency)
 
 ## Fixtures and Factories
 
 **Test Data:**
+- All test data generated inline via helper functions
+- No external fixture files, no JSON/CSV test data
+
+**Factory pattern used consistently:**
 ```rust
-// From benches/calibration.rs - benchmark helper
-fn make_20pt_slice() -> (Vec<f64>, Vec<f64>, f64, f64) {
-    let eta = 0.8;
-    let gamma = 0.4;
-    let rho = -0.35;
-    let theta_star = 0.04;
-    let k_star = -0.01;
+// Unit test factories (private to test module)
+fn make_sample_slice() -> (Vec<f64>, Vec<f64>, f64, f64) { ... }
 
-    let theta = solve_theta(eta, gamma, rho, theta_star, k_star).unwrap();
-    let k_slice: Vec<f64> = (0..20).map(|i| -0.5 + (i as f64) / 19.0).collect();
-    let w_market = ssvi::total_variance_slice(&k_slice, theta, eta, gamma, rho);
+// Integration test factories
+fn make_steep_skew_slice(t_expiry: f64) -> (Vec<f64>, Vec<f64>, f64) { ... }
 
-    (k_slice, w_market, theta_star, k_star)
-}
-
-// From tests/steep_skew.rs - integration test scenario builder
-fn make_steep_skew_slice(t_expiry: f64) -> (Vec<f64>, Vec<f64>, f64) {
-    let k_slice: Vec<f64> = (0..20).map(|i| -0.7 + (i as f64) * 1.0 / 19.0).collect();
-
-    let iv: Vec<f64> = k_slice
-        .iter()
-        .map(|&k| {
-            if k <= 0.0 {
-                0.4 + (0.7 - 0.4) * (-k / 0.7)
-            } else {
-                0.4 + 0.05 * (k / 0.3)
-            }
-        })
-        .collect();
-
-    let w_market: Vec<f64> = iv.iter().map(|&sigma| sigma * sigma * t_expiry).collect();
-    let theta_star = 0.4 * 0.4 * t_expiry;
-
-    (k_slice, w_market, theta_star)
-}
+// Benchmark factories
+fn make_20pt_slice() -> (Vec<f64>, Vec<f64>, f64, f64) { ... }
+fn make_surface_slices() -> Vec<(Vec<f64>, Vec<f64>, f64, f64, f64)> { ... }
 ```
 
-**Location:**
-- Test helpers defined in test module or at top of test file
-- Parametric data generation via loop indices
-
-## Coverage
-
-**Requirements:** None enforced
-
-**View Coverage:** Not configured
-
-**Current Coverage:**
-- Unit tests exist for core functions: `phi()`, `total_variance()`, `solve_theta()`, `calibrate()`, `brent()`, `nelder_mead_bounded()`
-- Mathematical properties verified: ATM consistency, no-arbitrage constraints, parameter recovery
-- Multiple test cases per function showing different scenarios
-
-## Test Types
-
-**Unit Tests:**
-- Scope: Individual functions and small algorithmic units
-- Approach: Direct function calls with known inputs, asserting expected outputs
-- Locations: `src/ssvi.rs`, `src/calibration.rs`, `src/brent.rs`, `src/nelder_mead.rs`
-- Example:
-```rust
-// From ssvi.rs
-#[test]
-fn phi_basic() {
-    let p = phi(1.0, 1.0, 0.5);
-    assert!((p - 1.0 / 2.0_f64.sqrt()).abs() < 1e-12);
-}
-```
-
-**Integration Tests:**
-- Scope: End-to-end calibration scenarios with realistic market data
-- Approach: Synthetic market data generation, full calibration pipeline, result validation
-- Location: `tests/steep_skew.rs`
-- Example:
-```rust
-// From tests/steep_skew.rs
-#[test]
-fn calibrate_recovers_parameters() {
-    let (k_slice, w_market, theta_star, k_star) = make_sample_slice();
-
-    let res = calibrate(&input, &NelderMeadConfig::default())
-        .expect("calibration must succeed");
-
-    assert!(res.optimizer.converged, "optimizer did not converge");
-    assert!(res.optimizer.f < 1e-20, "residual too large: {}", res.optimizer.f);
-    assert!((res.rho - (-0.35)).abs() < 1e-3, "rho: {}", res.rho);
-}
-```
-
-**E2E Tests:**
-- Not formally defined; integration tests serve this purpose
-- Binary report generator (`src/bin/report.rs`) tested manually via plotting output
-
-## Common Patterns
-
-**Async Testing:**
-- Not applicable (no async code in codebase)
-
-**Error Testing:**
-```rust
-// From brent.rs tests - testing failure case
-#[test]
-fn no_sign_change() {
-    let res = brent(|x| x * x + 1.0, 0.0, 2.0, 1e-14, 100);
-    assert!(!res.converged);
-}
-
-// From calibration.rs tests - testing edge case
-#[test]
-fn solve_theta_basic() {
-    let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.0);
-    assert!(theta.is_some());
-    let t = theta.unwrap();
-    assert!((t - 0.04).abs() < 1e-10);
-}
-
-// Option-based error handling in tests
-#[test]
-fn calibrate_recovers_parameters() {
-    // ... setup ...
-    let res = calibrate(&input, &NelderMeadConfig::default())
-        .expect("calibration must succeed");  // Panics if None
-}
-```
-
-**Floating-Point Assertions:**
-```rust
-// Pattern: using absolute tolerance for float comparison
-assert!((p - 1.0 / 2.0_f64.sqrt()).abs() < 1e-12);
-assert!((res.rho - (-0.35)).abs() < 1e-3, "rho: {}", res.rho);
-assert!((recovered_phi - true_phi).abs() / true_phi < 1e-3);
-
-// Pattern: relative tolerance for large values
-assert!(max_err < 1e-10, "max pointwise error: {}", max_err);
-```
-
-**Property-Based Testing:**
-```rust
-// From calibration.rs - synthetic data verification pattern
-// Generate from known parameters → calibrate → verify recovery
-let true_eta = 0.8;
-let true_gamma = 0.4;
-let true_rho = -0.35;
-
-let true_theta = solve_theta(true_eta, true_gamma, true_rho, theta_star, k_star)
-    .expect("true theta must solve");
-
-let k_slice: Vec<f64> = (0..20).map(|i| -0.5 + (i as f64) / 19.0).collect();
-let w_market = ssvi::total_variance_slice(&k_slice, true_theta, true_eta, true_gamma, true_rho);
-
-// ... calibrate back and verify recovery ...
-assert!((res.rho - (-0.35)).abs() < 1e-3, "rho: {}", res.rho);
-let recovered_phi = ssvi::phi(res.theta, res.eta, res.gamma);
-assert!((recovered_phi - true_phi).abs() / true_phi < 1e-3);
-```
+**Return type convention:** Factories return tuples of `(k_slice, w_market, theta_star, k_star)` -- always in this order.
 
 ## Benchmarks
 
-**Framework:** Criterion.rs
+**Framework:** Criterion 0.5 (`benches/calibration.rs`)
 
-**Location:** `benches/calibration.rs`
-
-**Configuration:** In `Cargo.toml`:
-```toml
-[dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-
-[[bench]]
-name = "calibration"
-harness = false
-```
-
-**Benchmark Functions:**
+**Pattern:**
 ```rust
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+
 fn bench_calibrate_20pt(c: &mut Criterion) {
+    // Setup outside the benchmark loop
     let (k_slice, w_market, theta_star, k_star) = make_20pt_slice();
-    let input = CalibrationInput {
-        k_slice: &k_slice,
-        w_market: &w_market,
-        theta_star,
-        k_star,
-    };
+    let input = CalibrationInput { ... };
     let config = NelderMeadConfig::default();
 
     c.bench_function("calibrate_20pt_slice", |b| {
@@ -307,22 +207,110 @@ fn bench_calibrate_20pt(c: &mut Criterion) {
     });
 }
 
-fn bench_solve_theta(c: &mut Criterion) {
-    c.bench_function("solve_theta", |b| {
-        b.iter(|| solve_theta(black_box(0.8), black_box(0.4), black_box(-0.35), black_box(0.04), black_box(0.0)))
-    });
+criterion_group!(benches, bench_calibrate_20pt, bench_solve_theta, ...);
+criterion_main!(benches);
+```
+
+**Benchmarked operations (4 benchmarks):**
+- `calibrate_20pt_slice` -- full calibration of a single 20-point slice
+- `solve_theta` -- Newton solver across 6 different k_star values (grouped)
+- `total_variance_20pt` -- vectorized total variance computation
+- `surface_12_slices` -- full 12-slice surface calibration with calendar penalty
+
+**Anti-optimization:** All benchmark inputs wrapped in `black_box()` to prevent compiler elision.
+
+## Coverage
+
+**Requirements:** None enforced (no coverage tool configured)
+
+**Current coverage assessment:**
+- `src/ssvi.rs`: 3 unit tests covering `phi`, `total_variance` (ATM case), `no_arbitrage_satisfied`
+- `src/calibration.rs`: 5 unit tests covering `solve_theta` (2 cases), `calibrate` (2 cases), no-arb enforcement
+- `src/nelder_mead.rs`: 2 unit tests covering Rosenbrock convergence and boundary solutions
+- `src/brent.rs`: 2 unit tests covering convergence (sqrt 2) and non-convergence (no sign change)
+- `tests/steep_skew.rs`: 2 integration tests for stress scenarios
+- `calibrate_with_calendar_penalty`: tested only in benchmarks, no unit or integration test assertions
+- Binary code (`src/bin/`): no tests
+
+**View Coverage:**
+```bash
+cargo install cargo-tarpaulin    # If not installed
+cargo tarpaulin --out Html       # Generate HTML report
+```
+
+## Test Types
+
+**Unit Tests (12 total):**
+- Scope: individual mathematical functions and solver convergence
+- Pattern: call function with known inputs, assert output within tolerance
+- Location: `#[cfg(test)] mod tests` in each `src/*.rs` file
+
+**Integration Tests (2 total):**
+- Scope: full calibration pipeline under stress conditions
+- Pattern: build realistic market data, run calibration, assert fit quality
+- Location: `tests/steep_skew.rs`
+
+**E2E Tests:** Not used. Binary outputs (reports, plots) are not tested programmatically.
+
+**Benchmarks (4 total):**
+- Scope: performance regression detection for hot paths
+- Pattern: Criterion microbenchmarks with `black_box` inputs
+- Location: `benches/calibration.rs`
+
+## Common Patterns
+
+**Round-Trip Testing:**
+```rust
+// Generate synthetic data from known true parameters
+let true_theta = solve_theta(true_eta, true_gamma, true_rho, theta_star, k_star)
+    .expect("true theta must solve");
+let w_market = ssvi::total_variance_slice(&k_slice, true_theta, true_eta, true_gamma, true_rho);
+
+// Calibrate back
+let res = calibrate(&input, &NelderMeadConfig::default())
+    .expect("calibration must succeed");
+
+// Verify recovery (use phi since eta/gamma have degeneracy)
+let recovered_phi = ssvi::phi(res.theta, res.eta, res.gamma);
+assert!((recovered_phi - true_phi).abs() / true_phi < 1e-3);
+```
+
+**Degenerate Case Testing:**
+```rust
+// k_star = 0 simplifies the equation to theta = theta_star
+let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.0);
+assert!((t - 0.04).abs() < 1e-10);
+
+// ATM (k=0) total variance equals theta regardless of other params
+let w = total_variance(0.0, 0.04, 1.0, 0.5, -0.3);
+assert!((w - 0.04).abs() < 1e-12);
+```
+
+**Property-Based Assertions:**
+```rust
+// No-arbitrage must hold on calibrated output
+assert!(ssvi::no_arbitrage_satisfied(res.eta, res.rho));
+
+// Optimizer must converge
+assert!(res.optimizer.converged);
+
+// Pointwise model-vs-market error must be small
+let max_err: f64 = w_fit.iter().zip(w_market.iter())
+    .map(|(m, w)| (m - w).abs())
+    .fold(0.0_f64, f64::max);
+assert!(max_err < 1e-10);
+```
+
+**Parameterized Testing (manual loop):**
+```rust
+// No parameterized test macro used; manual loops over test cases
+let expiries = [1.0, 0.1, 0.01, 0.001];
+for &t in &expiries {
+    let res = calibrate(&input, &NelderMeadConfig::default());
+    assert!(res.is_some(), "calibration failed at T={}", t);
 }
 ```
 
-**Run Benchmarks:**
-```bash
-cargo bench                    # Run all benchmarks
-cargo bench -- --verbose       # Show detailed output
-cargo bench -- --baseline foo  # Compare against saved baseline
-```
-
-**Report Output:** HTML reports generated in `target/criterion/` directory
-
 ---
 
-*Testing analysis: 2026-03-05*
+*Testing analysis: 2026-03-07*
