@@ -1,21 +1,49 @@
 # External Integrations
 
-**Analysis Date:** 2026-03-07
+**Analysis Date:** 2026-03-08
 
 ## APIs & External Services
 
-**None.** This is a self-contained numerical library with no network calls, no API clients, and no external service dependencies.
+**Yahoo Finance (data acquisition only):**
+- Used for downloading European-style index option chains (SPX, NDX)
+- SDK/Client: `yfinance` Python package (called from `scripts/fetch_options.py`)
+- Auth: None required (public API, no API key)
+- Rate limiting: 0.1s between expiry fetches, 2s between tickers (implemented in script)
+- Method: `yf.Ticker(symbol).option_chain(expiry)` for each available expiration date
+- Tickers configured: `^SPX` (S&P 500), `^NDX` (Nasdaq 100)
+- Not used at runtime by the Rust library; data is pre-fetched to CSV files
+
+**No other external APIs:**
+- The Rust library (`essvi`) makes zero network calls
+- All computation is purely local, operating on CSV files in `data/`
 
 ## Data Storage
 
 **Databases:**
-- None. No database of any kind.
+- None. No database of any kind (SQL, NoSQL, embedded).
 
 **File Storage:**
 - Local filesystem only
-  - Binaries write SVG plots to `documents/plots/`
-  - Binaries write Markdown reports to `documents/`
-  - Uses `std::fs` for all file I/O
+- Input data: CSV files in `data/{source}/{underlying}/{YYYY-MM-DD}.csv`
+- Output: SVG plots and Markdown reports written to `documents/data-plots/`
+
+**Data directory structure:**
+```
+data/
+  cboe/
+    spx/          # S&P 500 option chains
+    ndx/          # Nasdaq 100 option chains
+  eurex/
+    sx5e/         # Euro Stoxx 50 (placeholder, no data yet)
+  kaggle/
+    spy/          # Kaggle SPY historical data
+  sample/         # Synthetic test data (placeholder)
+```
+
+**CSV schema (canonical):**
+- Required columns: `quote_date`, `expiry`, `strike`, `option_type`, `bid`, `ask`, `underlying_price`
+- Optional columns: `volume`, `open_interest`, `implied_vol`
+- Schema documented in `data/README.md`
 
 **Caching:**
 - None
@@ -23,24 +51,26 @@
 ## Authentication & Identity
 
 **Auth Provider:**
-- Not applicable. No authentication of any kind.
+- Not applicable. No authentication system.
+- This is a numerical library, not a web application.
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None. Errors are handled via `Option<T>` return types and `eprintln!` for binary error output.
+- None. No Sentry, Datadog, or similar.
 
 **Logs:**
-- `println!` / `eprintln!` in binaries only. No logging framework.
-- Library code uses no logging whatsoever; it returns `Option<CalibrationResult>`.
+- `println!` / `eprintln!` for binary output (progress, diagnostics, results)
+- No structured logging framework (no `tracing`, `log`, `env_logger`)
+- Library code (`src/lib.rs` and modules) does not emit any log output; only binaries in `src/bin/` print to stdout/stderr
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not applicable. Library crate, not a deployed service.
+- Not deployed. Library crate intended for local use and potential crates.io publication.
 
 **CI Pipeline:**
-- None detected. No `.github/workflows/`, `.gitlab-ci.yml`, or similar CI configuration.
+- None detected. No `.github/workflows/`, no `.gitlab-ci.yml`, no `Makefile`, no CI configuration files.
 
 ## Environment Configuration
 
@@ -48,7 +78,14 @@
 - None. The library and binaries require no environment variables.
 
 **Secrets location:**
-- Not applicable. No secrets, API keys, or credentials of any kind.
+- No secrets needed. Yahoo Finance API is public/unauthenticated.
+
+**CLI arguments for binaries:**
+- `fit_cboe`: `cargo run --bin fit_cboe -- <ticker> <date>` (e.g., `spx 2026-03-07`)
+- `fit_crude`: `cargo run --bin fit_crude -- <ticker> <date>`
+- `fit_kaggle`: `cargo run --bin fit_kaggle -- <date>`
+- `plot_kaggle`: No args (processes all files in `data/kaggle/spy/`)
+- `fit_real`, `fit_real_surface`, `report`: No args (use built-in synthetic data)
 
 ## Webhooks & Callbacks
 
@@ -58,39 +95,17 @@
 **Outgoing:**
 - None
 
-## Output Artifacts
+## Data Flow Summary
 
-The only "integration" is filesystem output from the binaries:
+The only external integration is the data acquisition pipeline:
 
-| Binary | Output Files | Format |
-|--------|-------------|--------|
-| `report` | `documents/fit_quality_report.md`, `documents/plots/fit_*.svg` | Markdown + SVG |
-| `fit_real` | `documents/real-world-fit.md`, `documents/plots/fit_real_T*.svg` | Markdown + SVG |
-| `fit_real_surface` | `documents/real-world-surface-fit.md`, `documents/plots/fit_surface_T*.svg` | Markdown + SVG |
+1. `scripts/fetch_options.py` calls Yahoo Finance API via `yfinance`
+2. Option chain data is written to `data/cboe/{ticker}/{date}.csv`
+3. Rust binaries read CSV files from disk, perform SSVI calibration
+4. Results are written as SVG plots and Markdown reports to `documents/`
 
-## Third-Party Library Integration
-
-**plotters 0.3:**
-- Used exclusively in `src/bin/report.rs`, `src/bin/fit_real.rs`, `src/bin/fit_real_surface.rs`
-- SVGBackend for chart rendering (no bitmap/PNG output)
-- Not used in the library core (`src/lib.rs`, `src/ssvi.rs`, `src/calibration.rs`, etc.)
-- Patterns used: `ChartBuilder`, `LineSeries`, `Circle`, `SVGBackend`
-
-**criterion 0.5:**
-- Dev-dependency only, used in `benches/calibration.rs`
-- Benchmarks: `calibrate_20pt_slice`, `solve_theta`, `total_variance_20pt`, `surface_12_slices`
-- HTML reports enabled via feature flag
-
-## Data Sources
-
-All market data used by the binaries is **synthetic** (generated in-code):
-- `src/bin/fit_real.rs` - `build_market_slices()` generates 12 synthetic equity-index-like slices
-- `src/bin/fit_real_surface.rs` - Same synthetic data, different calibration approach
-- `src/bin/report.rs` - `make_market_data()` generates parametric smile data
-- No CSV/JSON/external data file parsing
-
-Reference materials exist in `documents/` (PDFs, PNGs) but are not read by any code.
+All computation is offline. The Rust library has no network dependencies.
 
 ---
 
-*Integration audit: 2026-03-07*
+*Integration audit: 2026-03-08*

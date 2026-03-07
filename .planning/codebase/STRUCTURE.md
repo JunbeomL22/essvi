@@ -1,187 +1,235 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-07
+**Analysis Date:** 2026-03-08
 
 ## Directory Layout
 
 ```
 essvi/
-├── src/
-│   ├── lib.rs              # Crate root: re-exports all public modules
-│   ├── ssvi.rs             # SSVI model formulas (phi, total_variance, no_arbitrage)
-│   ├── calibration.rs      # Calibration pipeline (solve_theta, calibrate, calendar penalty)
-│   ├── nelder_mead.rs      # Bounded Nelder-Mead optimizer
-│   ├── brent.rs            # Brent's method root finder
-│   └── bin/
-│       ├── report.rs       # Parameter grid sweep report generator
-│       ├── fit_real.rs     # Per-slice real-world-like data fitting
-│       └── fit_real_surface.rs  # Surface fit with calendar arbitrage penalty
-├── tests/
-│   └── steep_skew.rs       # Integration stress tests for steep skew regimes
-├── benches/
-│   └── calibration.rs      # Criterion benchmarks for all calibration paths
-├── documents/
-│   ├── plots/              # Generated SVG fit plots (~80 files)
-│   ├── fit_quality_report.md   # Grid sweep report output
-│   ├── real-world-fit.md       # Per-slice fit report output
-│   ├── real-world-surface-fit.md  # Surface fit report output
-│   ├── remedy.md           # Calendar arbitrage remedy notes
-│   ├── theta-calc.md       # Theta calculation derivation
-│   ├── guideline.md        # Project guidelines
-│   ├── real-data.png       # Reference market data screenshot
-│   ├── svi.pdf             # SVI reference paper
-│   └── robust-calibration.pdf  # Calibration reference paper
-├── .planning/
-│   ├── PROJECT.md          # Project definition and milestones
-│   └── codebase/           # Architecture/quality analysis documents (this directory)
-├── Cargo.toml              # Package manifest (edition 2024)
+├── benches/                # Criterion benchmarks
+│   └── calibration.rs      # Calibration + surface benchmarks
+├── data/                   # Market data (CSV files)
+│   ├── cboe/               # CBOE index options
+│   │   ├── ndx/            # Nasdaq 100 (date.csv)
+│   │   └── spx/            # S&P 500 (date.csv)
+│   ├── eurex/              # Eurex options (placeholder)
+│   │   └── sx5e/           # Euro Stoxx 50 (.gitkeep only)
+│   ├── kaggle/             # Historical Kaggle datasets
+│   │   └── spy/            # SPY options (date.csv)
+│   └── sample/             # Sample data (.gitkeep only)
+├── documents/              # Generated reports and plots
+│   ├── data-plots/         # Per-dataset fit plots (SVG)
+│   └── mock-results/       # Reference/mock results
+├── scripts/                # Data acquisition utilities
+│   └── fetch_options.py    # Yahoo Finance option chain fetcher
+├── src/                    # Rust source code
+│   ├── bin/                # Binary entry points
+│   │   ├── fit_cboe.rs     # Fit SSVI to CBOE data (implicit theta)
+│   │   ├── fit_crude.rs    # Fit SSVI to CBOE data (crude 4D solver)
+│   │   ├── fit_kaggle.rs   # Fit SSVI to Kaggle SPY data
+│   │   ├── fit_real.rs     # Fit SSVI to synthetic data (per-slice)
+│   │   ├── fit_real_surface.rs  # Fit SSVI surface to synthetic data
+│   │   ├── plot_kaggle.rs  # Plot raw Kaggle IV smiles (no fitting)
+│   │   └── report.rs       # Parameter grid quality report
+│   ├── math/               # Mathematical primitives
+│   │   ├── mod.rs          # Module declarations
+│   │   ├── constants.rs    # Machine-precision & math constants
+│   │   ├── erf.rs          # Error function (erf, erfc, erfcx)
+│   │   ├── normal.rs       # Normal PDF, CDF, inverse CDF
+│   │   └── normal_hp.rs    # High-precision normal CDF for tails
+│   ├── model/              # Volatility model definitions
+│   │   ├── mod.rs          # Module declarations
+│   │   └── ssvi.rs         # SSVI phi, total_variance, no-arb check
+│   ├── pricing/            # Option pricing
+│   │   ├── mod.rs          # Module declarations
+│   │   ├── error.rs        # PricingError enum
+│   │   ├── black76.rs      # Black-76 price, greeks, discounted price
+│   │   ├── lets_be_rational.rs  # Implied vol solver (LBR algorithm)
+│   │   └── rational_cubic.rs    # Rational cubic interpolation
+│   ├── solver/             # Numerical optimization
+│   │   ├── mod.rs          # Module declarations
+│   │   ├── brent.rs        # Brent's root-finding method
+│   │   └── nelder_mead.rs  # Bounded Nelder-Mead optimizer
+│   ├── calibration.rs      # Implicit-theta SSVI calibration
+│   ├── crude_solver.rs     # Direct 4D SSVI calibration
+│   ├── fit_common.rs       # Shared types/helpers for fit binaries
+│   └── lib.rs              # Library root (module declarations + re-exports)
+├── tests/                  # Integration tests
+│   ├── brent.rs            # Brent solver tests
+│   ├── calibration.rs      # Calibration pipeline tests
+│   ├── crude_solver.rs     # Crude solver tests
+│   ├── implied_vol.rs      # Implied vol round-trip tests
+│   ├── math.rs             # Math function accuracy tests
+│   ├── nelder_mead.rs      # Nelder-Mead optimizer tests
+│   ├── pricing.rs          # Black-76 pricing tests
+│   ├── ssvi.rs             # SSVI model tests
+│   └── steep_skew.rs       # Edge case: steep skew calibration
+├── .planning/              # GSD planning documents
+├── Cargo.toml              # Package manifest
 ├── Cargo.lock              # Dependency lockfile
-├── .gitignore              # Ignores /target only
+├── .gitignore              # Only ignores /target
 └── README.md               # Minimal placeholder
 ```
 
 ## Directory Purposes
 
 **`src/`:**
-- Purpose: All library source code (4 modules) and binary targets
-- Contains: Rust source files (`.rs`)
-- Key files: `lib.rs` (crate root), `calibration.rs` (largest module, 388 lines), `ssvi.rs` (core model)
+- Purpose: All Rust source code for the library and binaries
+- Contains: Library modules (organized by domain) and binary entry points
+- Key files: `lib.rs` (library root), `calibration.rs` and `crude_solver.rs` (core calibration logic)
 
 **`src/bin/`:**
-- Purpose: Standalone binary executables for report generation and demonstration
-- Contains: Three binaries that import the library and produce markdown reports + SVG plots
-- Key files: `fit_real.rs` (per-slice fitting), `fit_real_surface.rs` (surface fitting with calendar penalty), `report.rs` (parameter grid analysis)
+- Purpose: CLI binary entry points that consume the library
+- Contains: Seven standalone binaries, each with `fn main()`
+- Pattern: Each binary follows parse -> fit -> report structure
+- Key files: `fit_cboe.rs` (primary real-data fitting tool), `fit_crude.rs` (alternative solver)
+
+**`src/math/`:**
+- Purpose: Machine-precision mathematical building blocks
+- Contains: Error functions, normal distribution, constants
+- Key files: `erf.rs` (Cody's rational Chebyshev), `normal_hp.rs` (tail-safe CDF)
+
+**`src/model/`:**
+- Purpose: Parametric volatility model definitions
+- Contains: SSVI model only (currently)
+- Key files: `ssvi.rs` (phi, total_variance, no_arbitrage_satisfied)
+
+**`src/pricing/`:**
+- Purpose: Option pricing and implied volatility
+- Contains: Black-76 model, Let's Be Rational IV solver, error types
+- Key files: `black76.rs` (price + all greeks), `lets_be_rational.rs` (IV solver)
+
+**`src/solver/`:**
+- Purpose: Generic numerical solvers (model-agnostic)
+- Contains: Nelder-Mead optimizer, Brent root finder
+- Key files: `nelder_mead.rs` (used by both calibration approaches)
+
+**`data/`:**
+- Purpose: Market data input files
+- Contains: CSV files organized by source/ticker/date
+- Key structure: `data/<source>/<ticker>/<date>.csv`
+- Not generated; committed to repo (some files tracked, some untracked)
+
+**`documents/`:**
+- Purpose: Generated reports, plots, and reference materials
+- Contains: SVG plots, markdown reports, reference images
+- Generated by fit binaries; partially committed
 
 **`tests/`:**
-- Purpose: Integration tests that exercise the full calibration pipeline
-- Contains: Stress tests for extreme parameter regimes (steep skew, near-zero expiry)
-- Key files: `steep_skew.rs` (tests calibration across T=[1.0, 0.1, 0.01, 0.001])
+- Purpose: Integration tests (one file per module)
+- Contains: 9 test files covering all library modules
+- Pattern: Named to match the module being tested
 
 **`benches/`:**
 - Purpose: Performance benchmarks using Criterion
-- Contains: Benchmarks for `solve_theta`, `total_variance_slice`, per-slice calibration, and full 12-slice surface calibration
-- Key files: `calibration.rs`
+- Contains: Single file with 4 benchmark functions
+- Key file: `calibration.rs` (benchmarks calibrate, solve_theta, total_variance, surface)
 
-**`documents/`:**
-- Purpose: Reference materials, generated reports, and fit plots
-- Contains: PDF reference papers, markdown reports, PNG reference data, SVG plots
-- Key files: `guideline.md`, `fit_quality_report.md`, `real-world-fit.md`, `real-world-surface-fit.md`
-
-**`documents/plots/`:**
-- Purpose: Generated SVG visualizations of fit results
-- Contains: ~80 SVG files showing market data vs SSVI fit curves
-- Generated: Yes (by running binaries)
-- Committed: Yes
-
-**`.planning/`:**
-- Purpose: Project planning and analysis documents
-- Contains: `PROJECT.md` (project definition, milestones, decisions), `codebase/` subdirectory for architecture docs
-- Generated: No (manually maintained)
-- Committed: Yes
+**`scripts/`:**
+- Purpose: Data acquisition helper scripts (Python)
+- Contains: `fetch_options.py` for downloading option chains from Yahoo Finance
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/lib.rs`: Crate root, declares public modules `brent`, `calibration`, `nelder_mead`, `ssvi`
-- `src/bin/report.rs`: Parameter grid sweep binary (run: `cargo run --bin report`)
-- `src/bin/fit_real.rs`: Per-slice fitting binary (run: `cargo run --bin fit_real`)
-- `src/bin/fit_real_surface.rs`: Surface fitting binary (run: `cargo run --bin fit_real_surface`)
+- `src/lib.rs`: Library root -- declares all public modules and backward-compatible re-exports
+- `src/bin/fit_cboe.rs`: Primary real-data calibration binary (implicit theta solver)
+- `src/bin/fit_crude.rs`: Alternative calibration binary (crude 4D solver)
 
 **Configuration:**
-- `Cargo.toml`: Package manifest -- edition 2024, single dependency `plotters 0.3`, dev-dependency `criterion 0.5`
-- No runtime configuration files; all parameters are hardcoded in source
+- `Cargo.toml`: Package manifest (edition 2024, only dep: plotters 0.3, dev-dep: criterion 0.5)
+- `.gitignore`: Only ignores `/target`
 
 **Core Logic:**
-- `src/ssvi.rs`: SSVI model -- `phi()`, `total_variance()`, `total_variance_slice()`, `no_arbitrage_satisfied()`
-- `src/calibration.rs`: Calibration pipeline -- `solve_theta()`, `calibrate()`, `calibrate_with_calendar_penalty()`, plus data structs `CalibrationInput`, `CalibrationResult`, `PrevSlice`
-- `src/nelder_mead.rs`: Bounded Nelder-Mead optimizer -- `nelder_mead_bounded()`, `NelderMeadConfig`, `NelderMeadResult`
-- `src/brent.rs`: Brent root finder -- `brent()`, `BrentResult`
+- `src/calibration.rs`: Primary calibration pipeline -- `CalibrationConfig`, `solve_theta`, `calibrate`, `calibrate_with_calendar_penalty`
+- `src/crude_solver.rs`: Alternative calibration -- `CrudeCalibConfig`, `calibrate_slice`, `calibrate_surface`, butterfly penalty
+- `src/model/ssvi.rs`: SSVI model formulas -- `phi`, `total_variance`, `total_variance_slice`, `no_arbitrage_satisfied`
+- `src/solver/nelder_mead.rs`: Bounded Nelder-Mead optimizer -- `nelder_mead_bounded`
+- `src/fit_common.rs`: Shared binary utilities -- `FitResult`, `SliceData`, `plot_fit`, `build_market_slices`
 
 **Testing:**
-- `src/ssvi.rs` (inline `#[cfg(test)]` mod): Unit tests for phi, ATM total variance, no-arb check
-- `src/calibration.rs` (inline `#[cfg(test)]` mod): Unit tests for solve_theta, calibrate round-trip, no-arb enforcement
-- `src/nelder_mead.rs` (inline `#[cfg(test)]` mod): Rosenbrock 2D test, boundary solution test
-- `src/brent.rs` (inline `#[cfg(test)]` mod): sqrt(2) root finding, no-sign-change handling
-- `tests/steep_skew.rs`: Integration stress test across extreme parameter regimes
-- `benches/calibration.rs`: Criterion benchmarks for performance regression tracking
+- `tests/calibration.rs`: Calibration pipeline integration tests
+- `tests/crude_solver.rs`: Crude solver integration tests
+- `tests/pricing.rs`: Black-76 pricing accuracy tests
+- `tests/implied_vol.rs`: IV round-trip tests
+- `benches/calibration.rs`: Performance benchmarks
+
+**Data:**
+- `data/cboe/spx/*.csv`: CBOE SPX option chain CSVs (columns: quote_date, expiry, strike, underlying_price, c_bid, c_ask, c_iv, p_bid, p_ask, p_iv, combined_futures, log_moneyness, dte, total_variance)
+- `data/kaggle/spy/*.csv`: Kaggle SPY option CSVs (columns: QUOTE_UNIXTIME, ..., C_IV, P_IV, STRIKE, LOG_MONEYNESS, TOTAL_VARIANCE, DTE, etc.)
 
 ## Naming Conventions
 
 **Files:**
-- Library modules: `snake_case.rs` (e.g., `nelder_mead.rs`, `calibration.rs`)
-- Binary targets: `snake_case.rs` (e.g., `fit_real.rs`, `fit_real_surface.rs`)
-- Test files: `snake_case.rs` matching the feature under test (e.g., `steep_skew.rs`)
+- Library modules: `snake_case.rs` (e.g., `nelder_mead.rs`, `crude_solver.rs`, `lets_be_rational.rs`)
+- Binaries: `snake_case.rs` with verb-noun pattern (e.g., `fit_cboe.rs`, `plot_kaggle.rs`)
+- Tests: `snake_case.rs` matching the module name (e.g., `tests/calibration.rs` tests `src/calibration.rs`)
+- Data files: `<date>.csv` within source/ticker directories
 
 **Directories:**
-- All lowercase: `src/`, `tests/`, `benches/`, `documents/`, `documents/plots/`
-- Standard Rust project layout (no custom directory patterns)
+- Source modules: `snake_case` matching Rust module names (e.g., `math/`, `model/`, `pricing/`, `solver/`)
+- Data directories: `<source>/<ticker>/` (e.g., `cboe/spx/`, `kaggle/spy/`)
 
-**Functions:**
-- Public API: `snake_case` (e.g., `total_variance()`, `solve_theta()`, `calibrate()`, `nelder_mead_bounded()`)
-- Internal helpers: `snake_case` (e.g., `weighted_squared_error()`, `calendar_penalty()`, `project()`)
-
-**Types:**
-- Structs: `PascalCase` (e.g., `CalibrationInput`, `NelderMeadConfig`, `CalibrationResult`, `PrevSlice`, `BrentResult`)
-- No enums, traits, or type aliases in the current codebase
-
-**Variables:**
-- Mathematical variables preserved from academic notation: `eta`, `gamma`, `rho`, `theta`, `phi`, `k`, `w`
-- Descriptive names for composite values: `theta_star`, `k_star`, `w_market`, `k_slice`, `no_arb_usage`
-- Loop counters and temporaries: `i`, `j`, `n`, `t`, `s`, `pk`, `dk`
+**Modules:**
+- `mod.rs` files contain only submodule declarations (e.g., `pub mod ssvi;`)
+- Module re-exports in `lib.rs` for backward compatibility: `pub use model::ssvi;`
 
 ## Where to Add New Code
 
-**New Model (e.g., eSSVI):**
-- Create: `src/essvi.rs` (or `src/essvi_model.rs`) as a new module
-- Register in: `src/lib.rs` -- add `pub mod essvi_model;`
-- Follow pattern of: `src/ssvi.rs` -- pure functions, `#[inline]` on hot-path evaluators, `#[cfg(test)]` module at bottom
-
-**New Calibration Pipeline (e.g., eSSVI calibration):**
-- Create: `src/essvi_calibration.rs` (separate from existing `calibration.rs`)
-- Follow pattern of: `src/calibration.rs` -- `CalibrationInput`-like struct, `Option`-returning calibrate function, reuse `nelder_mead_bounded()`
-- Register in: `src/lib.rs`
-
-**New Binary (e.g., comparative report):**
-- Create: `src/bin/compare.rs` (or similar descriptive name)
-- Follow pattern of: `src/bin/report.rs` -- define data structs, run calibration, generate SVG plots via `plotters`, write markdown report
-- No Cargo.toml changes needed (Cargo auto-discovers `src/bin/*.rs`)
-
-**New Integration Test:**
-- Create: `tests/new_test_name.rs`
-- Follow pattern of: `tests/steep_skew.rs` -- import `essvi::calibration::*` and `essvi::ssvi`, use `#[test]` functions
-- No Cargo.toml changes needed (Cargo auto-discovers `tests/*.rs`)
-
-**New Benchmark:**
-- Add to: `benches/calibration.rs` -- define a new `bench_*` function, add to `criterion_group!`
-- Follow pattern of: existing bench functions that use `black_box()` for inputs
+**New Volatility Model (e.g., SVI, SABR):**
+- Create: `src/model/<name>.rs` (model formulas)
+- Register: Add `pub mod <name>;` in `src/model/mod.rs`
+- Optionally re-export: Add `pub use model::<name>;` in `src/lib.rs`
+- Create calibration: Add calibration functions in a new `src/<name>_calibration.rs` or extend `src/calibration.rs`
+- Tests: Add `tests/<name>.rs`
 
 **New Numerical Solver:**
-- Create: `src/solver_name.rs`
-- Register in: `src/lib.rs`
-- Follow pattern of: `src/brent.rs` or `src/nelder_mead.rs` -- generic function taking a closure, config struct with `Default`, result struct with convergence flag
+- Create: `src/solver/<name>.rs`
+- Register: Add `pub mod <name>;` in `src/solver/mod.rs`
+- Tests: Add `tests/<name>.rs`
 
-**Shared Utilities:**
-- Currently no dedicated utilities module exists
-- Small helpers live in the module that uses them (e.g., `weighted_squared_error()` in `calibration.rs`, `project()` in `nelder_mead.rs`)
-- If cross-module utilities are needed, create `src/utils.rs` and register in `src/lib.rs`
+**New Data Source Binary:**
+- Create: `src/bin/fit_<source>.rs` following the parse -> fit -> report pattern from `fit_cboe.rs`
+- Reuse: `src/fit_common.rs` for `FitResult`, `plot_fit`
+- Data: Add CSV files to `data/<source>/<ticker>/`
+- No Cargo.toml changes needed -- Rust auto-discovers binaries in `src/bin/`
+
+**New Math Primitive:**
+- Create: `src/math/<name>.rs`
+- Register: Add `pub mod <name>;` in `src/math/mod.rs`
+- Tests: Extend `tests/math.rs` or create `tests/<name>.rs`
+
+**New Pricing Model:**
+- Create: `src/pricing/<name>.rs`
+- Register: Add `pub mod <name>;` in `src/pricing/mod.rs`
+- Tests: Extend `tests/pricing.rs` or create dedicated test file
+
+**New Benchmark:**
+- Add benchmark function in `benches/calibration.rs`
+- Register in `criterion_group!` macro at bottom of file
 
 ## Special Directories
 
 **`target/`:**
-- Purpose: Cargo build artifacts
-- Generated: Yes
+- Purpose: Rust build artifacts (debug/release binaries, dependencies)
+- Generated: Yes (by `cargo build`)
 - Committed: No (in `.gitignore`)
 
-**`documents/plots/`:**
-- Purpose: SVG fit visualizations generated by binaries
-- Generated: Yes (by `cargo run --bin fit_real`, `cargo run --bin fit_real_surface`, `cargo run --bin report`)
-- Committed: Yes (tracked in git for documentation purposes)
+**`.planning/`:**
+- Purpose: GSD planning and codebase analysis documents
+- Generated: Partially (by GSD commands)
+- Committed: Yes
 
-**`.planning/codebase/`:**
-- Purpose: Architecture and quality analysis documents consumed by planning tools
-- Generated: Semi-automated (written by analysis agents)
+**`documents/data-plots/`:**
+- Purpose: SVG plots generated by fit binaries, organized by dataset
+- Generated: Yes (by `cargo run --bin fit_*`)
+- Committed: Yes (some subdirectories tracked)
+
+**`documents/mock-results/`:**
+- Purpose: Reference results and plots for validation
+- Generated: No (manually curated)
 - Committed: Yes
 
 ---
 
-*Structure analysis: 2026-03-07*
+*Structure analysis: 2026-03-08*
