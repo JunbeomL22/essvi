@@ -21,7 +21,7 @@
 ### v1.1 Pricing Primitives
 
 - [x] **Phase 6: Math Foundations** - Error functions, normal distributions, and numerical constants
-- [ ] **Phase 7: Black-76 Pricing** - Undiscounted/discounted pricing, greeks, and PricingError type
+- [x] **Phase 7: Black-76 Pricing** - Undiscounted/discounted pricing, greeks, and PricingError type
 - [ ] **Phase 8: Implied Volatility Solver** - Let's Be Rational algorithm with rational cubic initial guesses
 
 ## Phase Details
@@ -49,11 +49,10 @@ Plans:
   2. User can compute gamma, vega, and theta individually, and retrieve all greeks in a single combined call
   3. User can compute a discounted option price by passing a discount factor
   4. Invalid inputs and out-of-bounds prices return typed PricingError variants, not panics
-**Plans**: TBD
+**Plans**: 1/1
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [x] 07-01: Implement Black-76 pricing, greeks, and PricingError - completed 2026-03-07
 
 ### Phase 8: Implied Volatility Solver
 **Goal**: Users can recover implied volatility from option prices at machine precision
@@ -84,5 +83,5 @@ Phases execute in numeric order: 6 -> 7 -> 8
 | 4. Binary Deduplication | v1.0 | 1/1 | Complete | 2026-03-07 |
 | 5. Test Migration | v1.0 | 1/1 | Complete | 2026-03-07 |
 | 6. Math Foundations | v1.1 | 1/1 | Complete | 2026-03-07 |
-| 7. Black-76 Pricing | v1.1 | 0/? | Not started | - |
+| 7. Black-76 Pricing | v1.1 | 1/1 | Complete | 2026-03-07 |
 | 8. Implied Volatility Solver | v1.1 | 0/? | Not started | - |
