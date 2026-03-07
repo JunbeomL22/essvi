@@ -146,4 +146,4 @@
 | 14. Crude Solver Binary | v1.3 | 1/1 | Complete | 2026-03-07 |
 | 15. Direct Solver Core | 1/1 | Complete    | 2026-03-07 | - |
 | 16. Sequential Surface Calibration | 1/1 | Complete    | 2026-03-07 | - |
-| 17. Direct Solver Binary | 1/1 | Complete   | 2026-03-07 | - |
+| 17. Direct Solver Binary | 1/1 | Complete    | 2026-03-07 | - |
