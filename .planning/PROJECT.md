@@ -21,28 +21,32 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 ### Active
 
-- [ ] eSSVI model implementation (coexists with SSVI)
-- [ ] eSSVI calibration pipeline
-- [ ] Comparative fit quality report (SSVI vs eSSVI)
+- [ ] CalibrationConfig struct (bounds, grid steps, tolerances, lambda) with Default impl
+- [ ] Module restructuring (solver/, model/ submodules)
+- [ ] Impl blocks on domain structs (CalibrationResult, CalibrationInput, etc.)
+- [ ] Proper error types (Result<T, CalibError> replacing Option<T>)
+- [ ] Deduplicate binary code (shared SliceData, make_slice, FitResult, plot_fit)
+- [ ] Move all inline #[cfg(test)] blocks to tests/ directory
 
 ### Out of Scope
 
-- Replacing existing SSVI implementation — coexistence, not replacement
-- Surface-level calibration (cross-slice consistency) — future milestone
+- eSSVI model implementation — deferred to next milestone
+- Surface-level calibration improvements — future milestone
 - Real market data parsing — future milestone
 - API ergonomics / crate publishing — future milestone
 
 ## Context
 
-- The current SSVI implementation has a known limitation: at long expiry (T=1) with steep skew (slope >= 0.8), the no-arb constraint eta*(1+|rho|) <= 2 forces eta to saturate at 2.0 and rho to collapse to 0, producing 900-1700 bps IV errors.
-- eSSVI (Hendriks & Martini) reparameterizes the surface with different/relaxed constraints that should handle wings better.
-- The benchmark target smile is synthetic: sigma(k) = atm_vol + slope*(-k)^+ + 0.1*slope*k^+ + curvature*k^2.
+- The current codebase works correctly but has structural debt: hardcoded numeric constants scattered across calibration functions, duplicated code between binaries, flat module structure, and inline tests mixed with production code.
+- All calibration bounds (eta: [1e-6, 2.0-1e-6], gamma: [1e-6, 1.0-1e-6], rho: [-0.999, 0.999]), grid parameters (n_rho=20, rho sweep -0.95 to 0.95), and penalty config (k_penalty: -0.5 to 0.5 step 0.05, lambda=100) are hardcoded.
+- fit_real.rs and fit_real_surface.rs share ~150 lines of identical code (SliceData, make_slice, build_market_slices, FitResult, plot_fit).
+- Error handling uses Option<T> throughout the library — no way to distinguish failure modes.
 
 ## Constraints
 
 - **Tech stack**: Pure Rust, zero external dependencies for core logic (plotters allowed for reporting only)
-- **Architecture**: eSSVI must coexist as separate module, not modify existing SSVI code
-- **Testing**: All new code must have inline unit tests
+- **Backwards compat**: Public API changes must not break existing binary targets (update them in the same milestone)
+- **Testing**: All existing tests must pass after restructuring (move, don't delete)
 
 ## Key Decisions
 
@@ -50,16 +54,21 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 |----------|-----------|---------|
 | Bounded Nelder-Mead over L-BFGS-B | Only 3 vars, avoids external C deps | Good |
 | Eliminate equality constraint via implicit theta | Simpler solver, better convergence | Good |
-| Coexist eSSVI alongside SSVI | Non-breaking, users choose parameterization | -- Pending |
+| Single CalibrationConfig struct | Keeps API surface small, one place for all tuning knobs | — Pending |
+| Result<T, CalibError> over Option<T> | Enables callers to distinguish and handle failure modes | — Pending |
+| Reorganize into solver/ and model/ submodules | Clearer separation of concerns as library grows | — Pending |
 
-## Current Milestone: v1.0 eSSVI Implementation
+## Current Milestone: v1.0 Idiomatic Restructuring
 
-**Goal:** Add extended SSVI parameterization with better wing/skew handling, demonstrated via comparative fit quality report.
+**Goal:** Make the library structurally clean, configurable, and idiomatic Rust — removing hardcoded values, adding proper error types, restructuring modules, and separating tests.
 
 **Target features:**
-- eSSVI model module
-- eSSVI calibration pipeline
-- Comparative fit quality report (SSVI vs eSSVI)
+- CalibrationConfig struct with Default impl
+- Module hierarchy (solver/, model/)
+- Impl blocks on all domain structs
+- Proper error types with CalibError
+- Deduplicated binary code
+- External test directory mirroring src/ structure
 
 ---
-*Last updated: 2026-03-05 after milestone v1.0 initialization*
+*Last updated: 2026-03-07 after milestone v1.0 initialization*
