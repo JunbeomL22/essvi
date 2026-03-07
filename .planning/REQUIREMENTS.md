@@ -15,9 +15,9 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 
 ### Data Acquisition
 
-- [ ] **DATA-01**: At least 2 observation dates of real option chain data for one European-style index
-- [ ] **DATA-02**: Data from at least 2 different indices (e.g., Nikkei 225 + SPX, or Euro Stoxx 50 + SPX)
-- [ ] **DATA-03**: Each snapshot includes both calls and puts across multiple expiry slices
+- [x] **DATA-01**: At least 2 observation dates of real option chain data for one European-style index
+- [x] **DATA-02**: Data from at least 2 different indices (e.g., Nikkei 225 + SPX, or Euro Stoxx 50 + SPX)
+- [x] **DATA-03**: Each snapshot includes both calls and puts across multiple expiry slices
 
 ### Documentation
 
@@ -58,9 +58,9 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 | STOR-01 | Phase 9 | Pending |
 | STOR-02 | Phase 9 | Pending |
 | STOR-03 | Phase 9 | Pending |
-| DATA-01 | Phase 10 | Pending |
-| DATA-02 | Phase 10 | Pending |
-| DATA-03 | Phase 10 | Pending |
+| DATA-01 | Phase 10 | Complete |
+| DATA-02 | Phase 10 | Complete |
+| DATA-03 | Phase 10 | Complete |
 | DOCS-01 | Phase 11 | Pending |
 | DOCS-02 | Phase 11 | Pending |
 | DOCS-03 | Phase 11 | Pending |
@@ -72,4 +72,4 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after roadmap creation*
+*Last updated: 2026-03-07 after Phase 10 completion*
