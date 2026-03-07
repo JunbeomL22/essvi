@@ -10,17 +10,12 @@
     "plan_check": true,
     "verifier": true,
     "nyquist_validation": true,
-    "auto_advance": true,
-    "yolo": {
-      "active": true,
-      "start_phase": "12",
-      "timestamp": "2026-03-07T13:00:53.454Z"
-    },
+    "auto_advance": false,
     "_auto_chain_active": true
   },
   "parallelization": true,
   "brave_search": false,
-  "mode": "yolo",
+  "mode": "normal",
   "git": {
     "branching_strategy": "none"
   },
