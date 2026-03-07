@@ -9,9 +9,9 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 
 ### Data Storage
 
-- [ ] **STOR-01**: `data/` directory created with source-first hierarchy (`data/{source}/{underlying}/`)
-- [ ] **STOR-02**: Canonical CSV schema defined (strike, expiry, option_type, bid, ask, underlying_price, + optional forward, discount_factor, volume, open_interest, implied_vol)
-- [ ] **STOR-03**: `data/README.md` data dictionary documenting column definitions, units, and file naming conventions
+- [x] **STOR-01**: `data/` directory created with source-first hierarchy (`data/{source}/{underlying}/`)
+- [x] **STOR-02**: Canonical CSV schema defined (strike, expiry, option_type, bid, ask, underlying_price, + optional forward, discount_factor, volume, open_interest, implied_vol)
+- [x] **STOR-03**: `data/README.md` data dictionary documenting column definitions, units, and file naming conventions
 
 ### Data Acquisition
 
@@ -21,9 +21,9 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 
 ### Documentation
 
-- [ ] **DOCS-01**: Source provenance documented per data file (URL, download date, collection method)
-- [ ] **DOCS-02**: Exercise style confirmed as European for each index, with exchange specification references
-- [ ] **DOCS-03**: Data quality notes documenting any known issues, excluded rows, or observations
+- [x] **DOCS-01**: Source provenance documented per data file (URL, download date, collection method)
+- [x] **DOCS-02**: Exercise style confirmed as European for each index, with exchange specification references
+- [x] **DOCS-03**: Data quality notes documenting any known issues, excluded rows, or observations
 
 ## Future Requirements
 
@@ -55,15 +55,15 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STOR-01 | Phase 9 | Pending |
-| STOR-02 | Phase 9 | Pending |
-| STOR-03 | Phase 9 | Pending |
+| STOR-01 | Phase 9 | Complete |
+| STOR-02 | Phase 9 | Complete |
+| STOR-03 | Phase 9 | Complete |
 | DATA-01 | Phase 10 | Complete |
 | DATA-02 | Phase 10 | Complete |
 | DATA-03 | Phase 10 | Complete |
-| DOCS-01 | Phase 11 | Pending |
-| DOCS-02 | Phase 11 | Pending |
-| DOCS-03 | Phase 11 | Pending |
+| DOCS-01 | Phase 11 | Complete |
+| DOCS-02 | Phase 11 | Complete |
+| DOCS-03 | Phase 11 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 9 total
@@ -72,4 +72,4 @@ Requirements for v1.2 milestone. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after Phase 10 completion*
+*Last updated: 2026-03-07 after Phase 11 completion*

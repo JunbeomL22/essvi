@@ -95,4 +95,4 @@ Phases execute in numeric order: 9 -> 10 -> 11
 | 8. Implied Volatility Solver | v1.1 | 1/1 | Complete | 2026-03-07 |
 | 9. Data Schema and Directory Structure | v1.2 | 0/1 | Not started | - |
 | 10. Data Acquisition | 1/1 | Complete    | 2026-03-07 | - |
-| 11. Provenance and Quality Documentation | 1/1 | Complete   | 2026-03-07 | - |
+| 11. Provenance and Quality Documentation | 1/1 | Complete    | 2026-03-07 | - |
