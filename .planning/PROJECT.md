@@ -26,15 +26,30 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 ### Active
 
-(None — ready for next milestone)
+- [ ] Black-76 pricing model (undiscounted price/delta, greeks, gamma, vega, theta)
+- [ ] Let's Be Rational implied volatility solver (Jaeckel's machine-precision algorithm)
+- [ ] Supporting math: Cody's erf/erfc/erfcx, normal distribution (standard + high-precision)
+- [ ] Rational cubic interpolation utilities
+- [ ] PricingError type and numerical constants
+
+## Current Milestone: v1.1 Pricing Primitives
+
+**Goal:** Port Black-76 formula and Let's Be Rational implied volatility solver from fractal-engine as independent library modules.
+
+**Target features:**
+- Black-76 option pricing (futures options)
+- Jaeckel's implied volatility from option prices (machine-precision, 2-iteration convergence)
+- Normal distribution functions (standard and high-precision)
+- Error function implementations (Cody's rational Chebyshev approximations)
 
 ### Out of Scope
 
-- eSSVI model implementation — deferred to next milestone
+- eSSVI model implementation — deferred to future milestone
 - Surface-level calibration improvements — future milestone
 - Real market data parsing — future milestone
 - API ergonomics / crate publishing — future milestone
 - Async/parallel calibration — not needed for current use case
+- Integration with existing calibration pipeline — will be wired in a later milestone when input is option prices instead of IVs
 
 ## Context
 
@@ -63,4 +78,4 @@ Module structure: `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src
 | FitResult superset struct with default 0 for calendar fields | Avoids Option wrapping, keeps struct simple | ✓ Good |
 
 ---
-*Last updated: 2026-03-07 after v1.0 milestone*
+*Last updated: 2026-03-07 after v1.1 milestone start*

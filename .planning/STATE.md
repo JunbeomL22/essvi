@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Idiomatic Restructuring
-status: completed
-stopped_at: Milestone v1.0 complete -- all 5 phases done
+milestone: v1.1
+milestone_name: Pricing Primitives
+status: active
+stopped_at: null
 last_updated: "2026-03-07"
-last_activity: 2026-03-07 -- Milestone v1.0 archived
+last_activity: 2026-03-07 -- Milestone v1.1 started
 progress:
-  percent: 100
+  percent: 0
 ---
 
 # Project State
@@ -17,32 +17,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** Planning next milestone
+**Current focus:** v1.1 Pricing Primitives
 
 ## Current Position
 
-Milestone: v1.0 complete (shipped 2026-03-07)
-Status: Ready for next milestone
-Last activity: 2026-03-07 -- Milestone v1.0 archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-07 — Milestone v1.1 started
 
-Progress: [##########] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 5
-- Total execution time: <1 hour
-- Timeline: 2 days (2026-03-05 to 2026-03-07)
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1. Module Restructuring | 1 | ~3 min | ~3 min |
-| 2. Error Types and Impl Blocks | 1 | ~5 min | ~5 min |
-| 3. Calibration Config | 1 | ~6 min | ~6 min |
-| 4. Binary Deduplication | 1 | ~6 min | ~6 min |
-| 5. Test Migration | 1 | ~4 min | ~4 min |
+Progress: [..........] 0%
 
 ## Accumulated Context
 
@@ -61,5 +45,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Milestone v1.0 archived
+Stopped at: Defining requirements for v1.1
 Resume file: None
