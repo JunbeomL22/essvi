@@ -9,11 +9,11 @@ Requirements for Pricing Primitives milestone. Each maps to roadmap phases.
 
 ### Math Foundations
 
-- [ ] **MATH-01**: Library provides Cody's erf/erfc/erfcx with rational Chebyshev approximations
-- [ ] **MATH-02**: Library provides standard-precision normal distribution (PDF, CDF, inverse CDF)
-- [ ] **MATH-03**: Library provides high-precision normal distribution (PDF, CDF with asymptotic expansion, inverse CDF)
+- [x] **MATH-01**: Library provides Cody's erf/erfc/erfcx with rational Chebyshev approximations
+- [x] **MATH-02**: Library provides standard-precision normal distribution (PDF, CDF, inverse CDF)
+- [x] **MATH-03**: Library provides high-precision normal distribution (PDF, CDF with asymptotic expansion, inverse CDF)
 - [ ] **MATH-04**: Library provides rational cubic interpolation for initial guess refinement
-- [ ] **MATH-05**: Library provides numerical constants module (machine epsilon, algorithm thresholds)
+- [x] **MATH-05**: Library provides numerical constants module (machine epsilon, algorithm thresholds)
 
 ### Black-76 Pricing
 
@@ -50,11 +50,11 @@ Requirements for Pricing Primitives milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATH-01 | Phase 6 | Pending |
-| MATH-02 | Phase 6 | Pending |
-| MATH-03 | Phase 6 | Pending |
+| MATH-01 | Phase 6 | Done |
+| MATH-02 | Phase 6 | Done |
+| MATH-03 | Phase 6 | Done |
 | MATH-04 | Phase 8 | Pending |
-| MATH-05 | Phase 6 | Pending |
+| MATH-05 | Phase 6 | Done |
 | BLK-01 | Phase 7 | Pending |
 | BLK-02 | Phase 7 | Pending |
 | BLK-03 | Phase 7 | Pending |

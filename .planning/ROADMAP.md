@@ -20,7 +20,7 @@
 
 ### v1.1 Pricing Primitives
 
-- [ ] **Phase 6: Math Foundations** - Error functions, normal distributions, and numerical constants
+- [x] **Phase 6: Math Foundations** - Error functions, normal distributions, and numerical constants
 - [ ] **Phase 7: Black-76 Pricing** - Undiscounted/discounted pricing, greeks, and PricingError type
 - [ ] **Phase 8: Implied Volatility Solver** - Let's Be Rational algorithm with rational cubic initial guesses
 
@@ -35,11 +35,10 @@
   2. Standard normal PDF, CDF, and inverse CDF produce correct values across the full domain including tails
   3. High-precision normal CDF with asymptotic expansion handles extreme arguments without returning 0 or 1 prematurely
   4. Numerical constants module exists and is importable by downstream modules
-**Plans**: TBD
+**Plans**: 1/1
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [x] 06-01: Implement math foundations (erf, normal, normal_hp, constants) - completed 2026-03-07
 
 ### Phase 7: Black-76 Pricing
 **Goal**: Users can price futures options and compute greeks using the Black-76 model
@@ -84,6 +83,6 @@ Phases execute in numeric order: 6 -> 7 -> 8
 | 3. Calibration Config | v1.0 | 1/1 | Complete | 2026-03-07 |
 | 4. Binary Deduplication | v1.0 | 1/1 | Complete | 2026-03-07 |
 | 5. Test Migration | v1.0 | 1/1 | Complete | 2026-03-07 |
-| 6. Math Foundations | v1.1 | 0/? | Not started | - |
+| 6. Math Foundations | v1.1 | 1/1 | Complete | 2026-03-07 |
 | 7. Black-76 Pricing | v1.1 | 0/? | Not started | - |
 | 8. Implied Volatility Solver | v1.1 | 0/? | Not started | - |

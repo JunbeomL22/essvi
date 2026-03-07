@@ -5,9 +5,9 @@ milestone_name: Pricing Primitives
 status: active
 stopped_at: null
 last_updated: "2026-03-07"
-last_activity: 2026-03-07 -- Roadmap created for v1.1
+last_activity: 2026-03-07 -- Phase 6 Math Foundations completed
 progress:
-  percent: 0
+  percent: 33
 ---
 
 # Project State
@@ -17,16 +17,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** v1.1 Pricing Primitives - Phase 6 (Math Foundations)
+**Current focus:** v1.1 Pricing Primitives - Phase 7 (Black-76 Pricing)
 
 ## Current Position
 
-Phase: 6 of 8 (Math Foundations)
+Phase: 7 of 8 (Black-76 Pricing)
 Plan: 0 of ? in current phase
 Status: Ready to plan
-Last activity: 2026-03-07 -- Roadmap created for v1.1 (3 phases, 14 requirements)
+Last activity: 2026-03-07 -- Phase 6 Math Foundations completed (1/1 plans)
 
-Progress: [..........] 0%
+Progress: [###.......] 33%
 
 ## Performance Metrics
 
@@ -65,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Roadmap created for v1.1 Pricing Primitives
+Stopped at: Phase 6 completed, ready for Phase 7
 Resume file: None
