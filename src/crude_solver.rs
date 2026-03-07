@@ -49,6 +49,11 @@ pub struct CrudeCalibConfig {
     pub k_penalty_hi: f64,
     /// Number of points in the penalty evaluation grid.
     pub k_penalty_n: usize,
+
+    // ── Calendar spread penalty ──────────────────────────────
+    /// Penalty weight for calendar spread (theta monotonicity) violations.
+    /// Used by `calibrate_surface` to penalize theta < prev_theta.
+    pub lambda_calendar: f64,
 }
 
 impl Default for CrudeCalibConfig {
@@ -74,6 +79,8 @@ impl Default for CrudeCalibConfig {
             k_penalty_lo: -2.0,
             k_penalty_hi: 2.0,
             k_penalty_n: 50,
+
+            lambda_calendar: 10.0,
         }
     }
 }
@@ -95,6 +102,17 @@ pub struct CrudeCalibResult {
     pub converged: bool,
     /// Number of optimizer iterations used.
     pub iterations: usize,
+}
+
+/// Input data for one volatility slice in a multi-slice calibration.
+#[derive(Debug, Clone)]
+pub struct SliceInput<'a> {
+    /// Time to expiry.
+    pub t: f64,
+    /// Log-moneyness values for this slice.
+    pub k: &'a [f64],
+    /// Market total variance values for this slice.
+    pub w: &'a [f64],
 }
 
 // ── Butterfly arbitrage helpers ─────────────────────────────
@@ -151,6 +169,57 @@ pub fn calibrate_slice(
     w_market: &[f64],
     config: &CrudeCalibConfig,
 ) -> CrudeCalibResult {
+    calibrate_slice_with_prev(k_slice, w_market, config, None)
+}
+
+/// Calibrate multiple volatility slices sequentially with calendar spread penalty.
+///
+/// Slices are sorted by expiry T (shortest to longest) and calibrated in order.
+/// Each slice after the first includes a penalty for θ < prev_θ to enforce
+/// monotonically non-decreasing ATM total variance across expiries.
+///
+/// Results are returned in T-sorted order (ascending).
+pub fn calibrate_surface(
+    slices: &[SliceInput],
+    config: &CrudeCalibConfig,
+) -> Vec<CrudeCalibResult> {
+    if slices.is_empty() {
+        return Vec::new();
+    }
+
+    // Sort slice indices by T ascending
+    let mut indices: Vec<usize> = (0..slices.len()).collect();
+    indices.sort_by(|&a, &b| {
+        slices[a]
+            .t
+            .partial_cmp(&slices[b].t)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let mut results = Vec::with_capacity(slices.len());
+    let mut prev_theta: Option<f64> = None;
+
+    for &idx in &indices {
+        let slice = &slices[idx];
+        let result = calibrate_slice_with_prev(slice.k, slice.w, config, prev_theta);
+        prev_theta = Some(result.theta);
+        results.push(result);
+    }
+
+    results
+}
+
+/// Core calibration logic for a single slice, with optional calendar spread penalty.
+///
+/// When `prev_theta` is `Some(prev)`, the objective includes:
+///   lambda_calendar * max(0, prev - θ)²
+/// to penalize θ values below the previous slice's fitted θ.
+fn calibrate_slice_with_prev(
+    k_slice: &[f64],
+    w_market: &[f64],
+    config: &CrudeCalibConfig,
+    prev_theta: Option<f64>,
+) -> CrudeCalibResult {
     // Build penalty evaluation grid
     let k_grid: Vec<f64> = if config.k_penalty_n <= 1 {
         vec![0.0]
@@ -165,6 +234,7 @@ pub fn calibrate_slice(
     };
 
     let lambda = config.lambda;
+    let lambda_cal = config.lambda_calendar;
 
     // 4D objective: x = [theta, eta, gamma, rho]
     let objective = |x: &[f64]| -> f64 {
@@ -187,9 +257,17 @@ pub fn calibrate_slice(
             .sum();
 
         // Butterfly penalty
-        let penalty = butterfly_penalty(theta, eta, gamma, rho, &k_grid);
+        let bf_penalty = butterfly_penalty(theta, eta, gamma, rho, &k_grid);
 
-        sse + lambda * penalty
+        let mut total = sse + lambda * bf_penalty;
+
+        // Calendar spread penalty: penalize theta below previous slice's theta
+        if let Some(prev) = prev_theta {
+            let shortfall = (prev - theta).max(0.0);
+            total += lambda_cal * shortfall * shortfall;
+        }
+
+        total
     };
 
     // Bounds: [theta, eta, gamma, rho]
@@ -206,13 +284,18 @@ pub fn calibrate_slice(
         config.rho_upper,
     ];
 
-    // Initial theta estimate from median of w_market
+    // Initial theta estimate from median of w_market, biased by prev_theta if available
     let mut w_sorted: Vec<f64> = w_market.to_vec();
     w_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let theta_init = if w_sorted.is_empty() {
+    let median_w = if w_sorted.is_empty() {
         0.04
     } else {
         w_sorted[w_sorted.len() / 2]
+    };
+    let theta_init = if let Some(prev) = prev_theta {
+        prev.max(median_w)
+    } else {
+        median_w
     }
     .clamp(lb[0], ub[0]);
 
