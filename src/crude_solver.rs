@@ -64,7 +64,10 @@ impl Default for CrudeCalibConfig {
             rho_lower: -0.999,
             rho_upper: 0.999,
 
-            nelder_mead: NelderMeadConfig::default(),
+            nelder_mead: NelderMeadConfig {
+                max_iter: 5000,
+                ..NelderMeadConfig::default()
+            },
 
             lambda: 1.0,
 
@@ -203,23 +206,43 @@ pub fn calibrate_slice(
         config.rho_upper,
     ];
 
-    // Initial guess: theta from median of w_market, typical equity params
+    // Initial theta estimate from median of w_market
     let mut w_sorted: Vec<f64> = w_market.to_vec();
     w_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let theta_init = if w_sorted.is_empty() {
         0.04
     } else {
         w_sorted[w_sorted.len() / 2]
-    };
+    }
+    .clamp(lb[0], ub[0]);
 
-    let x0 = [
-        theta_init.clamp(lb[0], ub[0]),
-        0.5_f64.clamp(lb[1], ub[1]),
-        0.5_f64.clamp(lb[2], ub[2]),
-        (-0.3_f64).clamp(lb[3], ub[3]),
-    ];
+    // Multi-start: sweep initial rho and eta to avoid local minima.
+    // The 4D landscape has ridges where (eta, gamma) trade off;
+    // varying starting points helps the optimizer find the global basin.
+    let rho_starts: [f64; 4] = [-0.7, -0.3, 0.0, 0.3];
+    let eta_starts: [f64; 3] = [0.3, 0.8, 1.3];
 
-    let res = nelder_mead_bounded(objective, &x0, &lb, &ub, &config.nelder_mead);
+    let mut best_f = f64::INFINITY;
+    let mut best_res = None;
+
+    for &rho_init in &rho_starts {
+        for &eta_init in &eta_starts {
+            let x0 = [
+                theta_init,
+                eta_init.clamp(lb[1], ub[1]),
+                0.5_f64.clamp(lb[2], ub[2]),
+                rho_init.clamp(lb[3], ub[3]),
+            ];
+
+            let res = nelder_mead_bounded(&objective, &x0, &lb, &ub, &config.nelder_mead);
+            if res.f < best_f {
+                best_f = res.f;
+                best_res = Some(res);
+            }
+        }
+    }
+
+    let res = best_res.expect("at least one start point must run");
 
     // Compute final SSE (without penalty) for reporting
     let w_model = ssvi::total_variance_slice(k_slice, res.x[0], res.x[1], res.x[2], res.x[3]);
