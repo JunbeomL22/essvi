@@ -40,7 +40,7 @@
 
 ### v1.3 Crude Solver (Phases 12-14)
 
-- [ ] **Phase 12: Crude Solver Core** - CrudeCalibConfig struct and single-slice 4D Nelder-Mead calibration
+- [x] **Phase 12: Crude Solver Core** - CrudeCalibConfig struct and single-slice 4D Nelder-Mead calibration (completed 2026-03-07)
 - [ ] **Phase 13: Sequential Calibration** - Multi-slice sequential calibration with calendar spread penalty
 - [ ] **Phase 14: Crude Solver Binary** - Binary to run crude_solver on real data with SVG fit plots
 
@@ -93,6 +93,6 @@
 | 9. Data Schema and Directory Structure | v1.2 | 1/1 | Complete | 2026-03-07 |
 | 10. Data Acquisition | v1.2 | 1/1 | Complete | 2026-03-07 |
 | 11. Provenance and Quality Documentation | v1.2 | 1/1 | Complete | 2026-03-07 |
-| 12. Crude Solver Core | v1.3 | 0/? | Not started | - |
+| 12. Crude Solver Core | 1/1 | Complete   | 2026-03-07 | - |
 | 13. Sequential Calibration | v1.3 | 0/? | Not started | - |
 | 14. Crude Solver Binary | v1.3 | 0/? | Not started | - |
