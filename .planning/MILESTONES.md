@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.4 Direct Solver (Shipped: 2026-03-08)
+
+**Delivered:** New direct_solver module using pure SSE objective with algebraic no-arb barrier eta*(1+|rho|) <= 2 (no butterfly density in objective), multi-start sweep, post-hoc butterfly validation, and end-to-end binary for SPX/NDX calibration.
+
+**Phases completed:** 15-17 (3 phases, 3 plans)
+**Requirements:** 7/7 complete (SOLV x3, CAL x1, VAL x1, BIN x2)
+**Lines of Rust:** 8,034 (up from ~6,100)
+**Git range:** 23847d8..fd7db47
+**Timeline:** 3 days (2026-03-05 to 2026-03-08)
+**Commits:** 12
+
+**Key accomplishments:**
+- Created direct_solver module with 4D bounded Nelder-Mead, pure SSE objective, and algebraic no-arb barrier
+- Multi-start sweep over 12-point (4 rho x 3 eta) grid to avoid local minima
+- Post-hoc validate_butterfly function for per-point g(k) density checking
+- Sequential surface calibration with soft quadratic calendar spread penalty on theta monotonicity
+- fit_direct binary calibrating 45 SPX + 24 NDX slices with SVG plots and stdout summary
+- 132 tests passing (13 new integration tests, zero regressions)
+
+---
+
 ## v1.2 Market Data Collection (Shipped: 2026-03-07)
 
 **Delivered:** Collected and documented real European-style index option chain data (SPX + NDX) with canonical CSV schema, source provenance, and quality notes.

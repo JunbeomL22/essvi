@@ -118,6 +118,45 @@
 
 ---
 
+## Milestone: v1.4 — Direct Solver
+
+**Shipped:** 2026-03-08
+**Phases:** 3 | **Plans:** 3 | **Sessions:** 1
+
+### What Was Built
+- `direct_solver` module with 4D bounded Nelder-Mead, pure SSE objective, algebraic no-arb barrier eta*(1+|rho|) <= 2
+- 12-point multi-start sweep (4 rho x 3 eta grid) to avoid local minima
+- Post-hoc `validate_butterfly` function for per-point g(k) density checking
+- `calibrate_surface` for sequential multi-slice calibration with soft quadratic calendar spread penalty
+- `fit_direct` binary calibrating 45 SPX + 24 NDX slices with SVG plots and stdout summary
+
+### What Worked
+- YOLO mode with per-phase Task() spawning completed all 3 phases with proper GSD artifacts (PLAN.md, VERIFICATION.md, SUMMARY.md)
+- All 3 verifications passed on first attempt — no gap closure needed
+- Direct solver mirrors crude_solver structure, making implementation straightforward
+- 13 new integration tests added with zero regressions (132 total)
+
+### What Was Inefficient
+- v1.3 milestone completion was skipped (no MILESTONES.md entry, no retrospective) — v1.4 completion is the first to archive both
+- Research agent was disabled; planner had to derive implementation approach from codebase alone — worked fine for this domain-specific code
+
+### Patterns Established
+- Algebraic no-arb condition (hard barrier) + post-hoc butterfly validation is cleaner than butterfly density in objective
+- Multi-start sweep as first-class config (Vec<f64> for starts) makes grid user-configurable
+- Tests focus on SSE quality rather than exact parameter recovery when parameters have trade-offs
+
+### Key Lessons
+1. When a new module mirrors an existing one (direct_solver mirrors crude_solver), phases execute very fast with minimal design decisions
+2. Research agent can be disabled for well-understood domains without quality loss
+3. Soft quadratic penalties (lambda * max(0, delta)^2) correctly reduce but don't eliminate violations when data strongly opposes the constraint — this is the desired behavior
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1 (full YOLO run)
+- Notable: 3 phases completed in ~27 minutes of agent time; ~1,970 new LOC Rust
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -127,6 +166,7 @@
 | v1.0 | 1 | 5 | Initial milestone, YOLO mode, single-plan phases |
 | v1.1 | 1 | 3 | Numerical code, all phases in single subagent context |
 | v1.2 | 1 | 3 | Data engineering, per-phase Task() spawning, proper artifacts |
+| v1.4 | 1 | 3 | Direct solver, research disabled, all verifications passed first try |
 
 ### Cumulative Quality
 
@@ -135,10 +175,12 @@
 | v1.0 | 14 | Unit + integration | CalibError, CalibrationConfig |
 | v1.1 | 111 | Unit + integration + doc-tests | math/, pricing/ modules, PricingError |
 | v1.2 | 111 | Unchanged (data-only milestone) | data/ hierarchy, CSV schema, 33K rows market data |
+| v1.4 | 132 | Unit + integration + doc-tests | direct_solver, validate_butterfly, fit_direct |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Single-plan phases with YOLO mode is the most efficient pattern for well-scoped work — verified across v1.0 (5 phases), v1.1 (3 phases), and v1.2 (3 phases)
-2. Per-phase Task() spawning in YOLO mode generates proper GSD artifacts — the v1.0/v1.1 artifact gap was resolved in v1.2
+1. Single-plan phases with YOLO mode is the most efficient pattern for well-scoped work — verified across v1.0 (5 phases), v1.1 (3 phases), v1.2 (3 phases), v1.4 (3 phases)
+2. Per-phase Task() spawning in YOLO mode generates proper GSD artifacts — verified in v1.2 and v1.4
 3. Pure Rust zero-dependency modules are straightforward to implement — no external dependency coordination needed
 4. GSD plan/verify/execute pattern works for non-code deliverables (data collection, documentation) — verified in v1.2
+5. Mirroring existing module structure (direct_solver after crude_solver) enables very fast phase execution with minimal design overhead — verified in v1.4

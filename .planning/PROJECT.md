@@ -35,13 +35,14 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - ✓ Sequential slice calibration with calendar spread penalty — v1.3
 - ✓ No-arbitrage butterfly constraint enforcement (butterfly density penalty) — v1.3
 - ✓ Binary to run crude_solver against real SPX/NDX data — v1.3
+- ✓ direct_solver module with 4D Nelder-Mead using algebraic no-arb condition eta*(1+|rho|) <= 2 — v1.4
+- ✓ Sequential slice calibration with calendar spread penalty (direct_solver) — v1.4
+- ✓ Post-hoc butterfly density validation function (validate_butterfly) — v1.4
+- ✓ Binary to run direct_solver against real SPX/NDX data (fit_direct) — v1.4
 
 ### Active
 
-- [ ] direct_solver module with 4D Nelder-Mead using algebraic no-arb condition only
-- [ ] Sequential slice calibration with calendar spread penalty (direct_solver)
-- [ ] Post-hoc butterfly density validation function
-- [ ] Binary to run direct_solver against real SPX/NDX data
+(None — next milestone requirements TBD)
 
 ### Out of Scope
 
@@ -52,22 +53,15 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - Real-time data feeds — static snapshots sufficient for calibration
 - American-style option data — Black-76 and Let's Be Rational assume European exercise
 
-## Current Milestone: v1.4 Direct Solver
-
-**Goal:** Replace the crude butterfly density penalty with the simpler algebraic no-arb condition eta*(1+|rho|) <= 2 as hard barrier only, in a new direct_solver module. Post-hoc butterfly validation available separately.
-
-**Target features:**
-- direct_solver module — 4D bounded Nelder-Mead with algebraic no-arb hard barrier only (no butterfly density in objective)
-- Sequential calibration with calendar spread penalty (same approach, cleaner constraint)
-- Post-hoc validate_butterfly() function for checking fitted results
-- Binary to run direct_solver against real SPX/NDX data
-
 ## Context
 
-Shipped v1.2 with 4,663 LOC Rust + 33,680 rows of market data. Tech stack: pure Rust, plotters for reporting, yfinance (Python helper) for data acquisition.
-Module structure: `src/math/{erf,normal,normal_hp,constants}.rs`, `src/pricing/{black76,error,lets_be_rational,rational_cubic}.rs`, `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src/calibration.rs`, `src/fit_common.rs`.
+Shipped v1.4 with 8,034 LOC Rust + 33,680 rows of market data. Tech stack: pure Rust, plotters for reporting, yfinance (Python helper) for data acquisition.
+Module structure: `src/math/{erf,normal,normal_hp,constants}.rs`, `src/pricing/{black76,error,lets_be_rational,rational_cubic}.rs`, `src/model/ssvi.rs`, `src/solver/{nelder_mead,brent}.rs`, `src/calibration.rs`, `src/crude_solver.rs`, `src/direct_solver.rs`, `src/fit_common.rs`.
+Binaries: `src/bin/{fit_benchmark,fit_crude,fit_direct}.rs`.
 Data: `data/cboe/spx/` (2 dates), `data/cboe/ndx/` (1 date), canonical schema in `data/README.md`.
-111 tests (91 integration in `tests/`, 20 doc-tests), all passing.
+132 tests (integration in `tests/`, doc-tests), all passing.
+
+Two solver approaches available: crude_solver (butterfly density penalty in objective) and direct_solver (pure SSE with algebraic no-arb barrier). Both produce good fits on real SPX/NDX data.
 
 ## Constraints
 
@@ -98,5 +92,10 @@ Data: `data/cboe/spx/` (2 dates), `data/cboe/ndx/` (1 date), canonical schema in
 | Raw bid/ask prices over pre-computed IV | Tests full pipeline from market prices to calibration | ✓ Good |
 | NDX as second index (replacing Euro Stoxx 50) | Yahoo Finance lacks ^STOXX50E/^N225 option data; NDX is European-style on CBOE | ✓ Good |
 
+| Pure SSE objective (no butterfly in direct_solver) | Algebraic condition eta*(1+|rho|) <= 2 is sufficient for SSVI phi; cleaner than density penalty | ✓ Good |
+| Multi-start grid (4 rho × 3 eta = 12 starts) | Avoids local minima in 4D parameter space | ✓ Good |
+| Post-hoc butterfly validation over in-objective penalty | Separates fit quality from no-arb checking; user decides threshold | ✓ Good |
+| Soft quadratic calendar spread penalty | Encourages theta monotonicity without hard constraints that distort fits | ✓ Good |
+
 ---
-*Last updated: 2026-03-08 after v1.4 milestone started*
+*Last updated: 2026-03-08 after v1.4 milestone completed*

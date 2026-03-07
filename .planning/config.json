@@ -10,13 +10,8 @@
     "plan_check": true,
     "verifier": true,
     "nyquist_validation": true,
-    "auto_advance": true,
-    "_auto_chain_active": true,
-    "yolo": {
-      "active": true,
-      "start_phase": "15",
-      "timestamp": "2026-03-07T22:38:30.319Z"
-    }
+    "auto_advance": false,
+    "_auto_chain_active": true
   },
   "parallelization": true,
   "brave_search": false,
