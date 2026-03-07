@@ -197,6 +197,43 @@ pub fn calibrate_slice(
     calibrate_slice_with_prev(k_slice, w_market, config, None)
 }
 
+/// Calibrate multiple volatility slices sequentially with calendar spread penalty.
+///
+/// Slices are sorted by expiry T (shortest to longest) and calibrated in order.
+/// Each slice after the first includes a penalty for θ < prev_θ to enforce
+/// monotonically non-decreasing ATM total variance across expiries.
+///
+/// Results are returned in T-sorted order (ascending).
+pub fn calibrate_surface(
+    slices: &[SliceInput],
+    config: &DirectCalibConfig,
+) -> Vec<DirectCalibResult> {
+    if slices.is_empty() {
+        return Vec::new();
+    }
+
+    // Sort slice indices by T ascending
+    let mut indices: Vec<usize> = (0..slices.len()).collect();
+    indices.sort_by(|&a, &b| {
+        slices[a]
+            .t
+            .partial_cmp(&slices[b].t)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let mut results = Vec::with_capacity(slices.len());
+    let mut prev_theta: Option<f64> = None;
+
+    for &idx in &indices {
+        let slice = &slices[idx];
+        let result = calibrate_slice_with_prev(slice.k, slice.w, config, prev_theta);
+        prev_theta = Some(result.theta);
+        results.push(result);
+    }
+
+    results
+}
+
 /// Core calibration logic for a single slice, with optional calendar spread penalty.
 ///
 /// When `prev_theta` is `Some(prev)`, the objective includes:
