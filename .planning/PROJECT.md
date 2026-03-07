@@ -31,13 +31,17 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - ✓ Real option price data for European-style index options (SPX + NDX) — v1.2
 - ✓ `data/` directory with organized market data files and canonical CSV schema — v1.2
 - ✓ Source provenance, exercise style confirmation, and data quality documentation — v1.2
+- ✓ crude_solver module with 4D Nelder-Mead over (theta, eta, gamma, rho) — v1.3
+- ✓ Sequential slice calibration with calendar spread penalty — v1.3
+- ✓ No-arbitrage butterfly constraint enforcement (butterfly density penalty) — v1.3
+- ✓ Binary to run crude_solver against real SPX/NDX data — v1.3
 
 ### Active
 
-- [ ] crude_solver module with 4D Nelder-Mead over (theta, eta, gamma, rho)
-- [ ] Sequential slice calibration with calendar spread penalty
-- [ ] No-arbitrage butterfly constraint enforcement
-- [ ] Binary to run crude_solver against real SPX/NDX data
+- [ ] direct_solver module with 4D Nelder-Mead using algebraic no-arb condition only
+- [ ] Sequential slice calibration with calendar spread penalty (direct_solver)
+- [ ] Post-hoc butterfly density validation function
+- [ ] Binary to run direct_solver against real SPX/NDX data
 
 ### Out of Scope
 
@@ -48,15 +52,15 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 - Real-time data feeds — static snapshots sufficient for calibration
 - American-style option data — Black-76 and Let's Be Rational assume European exercise
 
-## Current Milestone: v1.3 Crude Solver
+## Current Milestone: v1.4 Direct Solver
 
-**Goal:** Add a direct 4D optimization solver that fits (theta, eta, gamma, rho) without implicit theta reduction, improving fit quality on real market data.
+**Goal:** Replace the crude butterfly density penalty with the simpler algebraic no-arb condition eta*(1+|rho|) <= 2 as hard barrier only, in a new direct_solver module. Post-hoc butterfly validation available separately.
 
 **Target features:**
-- crude_solver module — 4D bounded Nelder-Mead over full SSVI parameter space
-- Sequential calibration: sort slices by T, calibrate shortest first, penalize theta monotonicity violations
-- SSE on total variance + lambda * calendar spread penalty + no-arb butterfly check
-- Binary to run against real SPX/NDX option chain data
+- direct_solver module — 4D bounded Nelder-Mead with algebraic no-arb hard barrier only (no butterfly density in objective)
+- Sequential calibration with calendar spread penalty (same approach, cleaner constraint)
+- Post-hoc validate_butterfly() function for checking fitted results
+- Binary to run direct_solver against real SPX/NDX data
 
 ## Context
 
@@ -95,4 +99,4 @@ Data: `data/cboe/spx/` (2 dates), `data/cboe/ndx/` (1 date), canonical schema in
 | NDX as second index (replacing Euro Stoxx 50) | Yahoo Finance lacks ^STOXX50E/^N225 option data; NDX is European-style on CBOE | ✓ Good |
 
 ---
-*Last updated: 2026-03-07 after v1.3 milestone started*
+*Last updated: 2026-03-08 after v1.4 milestone started*

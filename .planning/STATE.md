@@ -1,36 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Crude Solver
-status: complete
-stopped_at: Phase 14 plan 01 complete, v1.3 milestone shipped
-last_updated: "2026-03-07T13:30:00.000Z"
-last_activity: 2026-03-07 -- Phase 14 plan 01 completed, v1.3 shipped
+milestone: v1.4
+milestone_name: Direct Solver
+status: active
+stopped_at: null
+last_updated: "2026-03-08T00:00:00.000Z"
+last_activity: 2026-03-08 -- Milestone v1.4 started
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-07)
+See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** v1.3 Crude Solver -- SHIPPED
+**Current focus:** v1.4 Direct Solver
 
 ## Current Position
 
-Phase: 14 of 14 (Crude Solver Binary)
-Plan: 01 complete
-Status: Milestone v1.3 shipped
-Last activity: 2026-03-07 -- Phase 14 plan 01 completed, v1.3 shipped
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-08 — Milestone v1.4 started
 
 ## Performance Metrics
 
