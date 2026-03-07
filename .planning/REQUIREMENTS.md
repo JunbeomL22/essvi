@@ -44,17 +44,17 @@ Requirements for crude solver milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CRUD-01 | -- | Pending |
-| CRUD-02 | -- | Pending |
-| CRUD-03 | -- | Pending |
-| BIN-01 | -- | Pending |
-| BIN-02 | -- | Pending |
+| CRUD-01 | Phase 12 | Pending |
+| CRUD-02 | Phase 12 | Pending |
+| CRUD-03 | Phase 13 | Pending |
+| BIN-01 | Phase 14 | Pending |
+| BIN-02 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 5 total
-- Mapped to phases: 0
-- Unmapped: 5
+- Mapped to phases: 5
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-07 after roadmap creation*
