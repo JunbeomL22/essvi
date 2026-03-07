@@ -145,6 +145,26 @@ All data was acquired using the `yfinance` Python library (Yahoo Finance API). T
 - **Exercise style:** European
 - **Status:** No data acquired. Yahoo Finance does not provide option chain data for `^STOXX50E`. The `data/eurex/sx5e/` directory remains as a placeholder with `.gitkeep` for future data acquisition via the Eurex data portal.
 
+## Exercise Style Confirmation
+
+All indices in this dataset use **European-style exercise**, which is required for:
+- Black-76 option pricing model (assumes exercise only at expiration)
+- `lets_be_rational` implied volatility solver (assumes European exercise)
+- SSVI calibration (total variance parameterization assumes no early exercise premium)
+
+| Index | Exchange | Exercise Style | Contract Specification |
+|-------|----------|----------------|----------------------|
+| S&P 500 (SPX) | CBOE | **European** | [CBOE SPX Options Specifications](https://www.cboe.com/tradable_products/sp_500/sp_500_options/specifications/) |
+| Nasdaq 100 (NDX) | CBOE | **European** | [CBOE NDX Options Specifications](https://www.cboe.com/tradable_products/nasdaq_100/nasdaq_100_options/specifications/) |
+
+**SPX:** "Exercise Style: European - SPX options generally may be exercised only on the expiration date." SPX options are cash-settled based on the Special Opening Quotation (SOQ) of the S&P 500 index on expiration Friday morning.
+
+**NDX:** "Exercise Style: European - NDX options may be exercised only on the expiration date." NDX options are cash-settled based on the Special Opening Quotation (SOQ) of the Nasdaq 100 index.
+
+**Note on Euro Stoxx 50 (SX5E):** The `data/eurex/sx5e/` directory exists as a placeholder. Euro Stoxx 50 index options (OESX) on Eurex are European-style. Exercise style reference: [Eurex Euro Stoxx 50 Options](https://www.eurex.com/ex-en/markets/idx/stx/euro-stoxx-50-derivatives). No data was acquired because Yahoo Finance does not provide option chain data for `^STOXX50E`.
+
+**Why not American-style indices?** American-style options (e.g., SPY ETF options) have an early exercise premium that Black-76 does not capture. Using American-style option prices with a European model would produce systematic IV bias, particularly for deep ITM options where early exercise is optimal.
+
 ## Data Quality Notes
 
 Document known issues per data file using the format below.
