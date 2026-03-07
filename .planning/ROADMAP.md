@@ -51,7 +51,7 @@
 ### v1.4 Direct Solver (Phases 15-17)
 
 - [x] **Phase 15: Direct Solver Core** - DirectCalibConfig, single-slice 4D Nelder-Mead with algebraic no-arb barrier, multi-start sweep, and post-hoc butterfly validation (completed 2026-03-07)
-- [ ] **Phase 16: Sequential Surface Calibration** - Multi-slice sequential calibration with calendar spread penalty on theta monotonicity
+- [x] **Phase 16: Sequential Surface Calibration** - Multi-slice sequential calibration with calendar spread penalty on theta monotonicity (completed 2026-03-07)
 - [ ] **Phase 17: Direct Solver Binary** - Binary to run direct_solver on real SPX/NDX data with SVG plots and fit summary
 
 ## Phase Details
@@ -145,5 +145,5 @@
 | 13. Sequential Calibration | v1.3 | 1/1 | Complete | 2026-03-07 |
 | 14. Crude Solver Binary | v1.3 | 1/1 | Complete | 2026-03-07 |
 | 15. Direct Solver Core | 1/1 | Complete    | 2026-03-07 | - |
-| 16. Sequential Surface Calibration | v1.4 | 0/? | Not started | - |
+| 16. Sequential Surface Calibration | 1/1 | Complete   | 2026-03-07 | - |
 | 17. Direct Solver Binary | v1.4 | 0/? | Not started | - |
