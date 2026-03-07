@@ -23,8 +23,8 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 - [ ] CalibrationConfig struct (bounds, grid steps, tolerances, lambda) with Default impl
 - [ ] Module restructuring (solver/, model/ submodules)
-- [ ] Impl blocks on domain structs (CalibrationResult, CalibrationInput, etc.)
-- [ ] Proper error types (Result<T, CalibError> replacing Option<T>)
+- [x] Impl blocks on domain structs (CalibrationResult, CalibrationInput, etc.)
+- [x] Proper error types (Result<T, CalibError> replacing Option<T>)
 - [ ] Deduplicate binary code (shared SliceData, make_slice, FitResult, plot_fit)
 - [ ] Move all inline #[cfg(test)] blocks to tests/ directory
 
@@ -55,8 +55,8 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 | Bounded Nelder-Mead over L-BFGS-B | Only 3 vars, avoids external C deps | Good |
 | Eliminate equality constraint via implicit theta | Simpler solver, better convergence | Good |
 | Single CalibrationConfig struct | Keeps API surface small, one place for all tuning knobs | — Pending |
-| Result<T, CalibError> over Option<T> | Enables callers to distinguish and handle failure modes | — Pending |
-| Reorganize into solver/ and model/ submodules | Clearer separation of concerns as library grows | — Pending |
+| Result<T, CalibError> over Option<T> | Enables callers to distinguish and handle failure modes | Good |
+| Reorganize into solver/ and model/ submodules | Clearer separation of concerns as library grows | Good |
 
 ## Current Milestone: v1.0 Idiomatic Restructuring
 

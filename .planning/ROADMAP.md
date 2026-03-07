@@ -13,7 +13,7 @@ Transform the essvi library from a working-but-rough codebase into idiomatic Rus
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Module Restructuring** - Move source files into solver/ and model/ submodule hierarchy
-- [ ] **Phase 2: Error Types and Impl Blocks** - Replace Option returns with Result<T, CalibError> and add methods to domain structs
+- [x] **Phase 2: Error Types and Impl Blocks** - Replace Option returns with Result<T, CalibError> and add methods to domain structs
 - [ ] **Phase 3: Calibration Config** - Extract hardcoded constants into CalibrationConfig struct with Default impl
 - [ ] **Phase 4: Binary Deduplication** - Extract shared code from fit_real binaries into a common module
 - [ ] **Phase 5: Test Migration** - Move all inline tests to tests/ directory and verify coverage
@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. calibrate() returns Result<CalibrationResult, CalibError> with a non-convergence variant
   4. calibrate_with_calendar_penalty() returns Result<CalibrationResult, CalibError>
   5. Existing binary callers handle the new Result returns (compile and run without panics)
-**Plans**: TBD
+**Plans**: Completed (1 plan: define CalibError enum, add CalibrationResult impl block, convert solve_theta/calibrate/calibrate_with_calendar_penalty to Result, update all callers)
 
 ### Phase 3: Calibration Config
 **Goal**: All calibration tuning knobs live in a single CalibrationConfig struct with sensible defaults, eliminating hardcoded constants
@@ -83,7 +83,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Module Restructuring | 1/1 | Complete | 2026-03-07 |
-| 2. Error Types and Impl Blocks | 0/0 | Not started | - |
+| 2. Error Types and Impl Blocks | 1/1 | Complete | 2026-03-07 |
 | 3. Calibration Config | 0/0 | Not started | - |
 | 4. Binary Deduplication | 0/0 | Not started | - |
 | 5. Test Migration | 0/0 | Not started | - |

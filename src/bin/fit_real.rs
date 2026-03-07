@@ -142,7 +142,7 @@ fn fit_slice(slice: &SliceData) -> Option<FitResult> {
     };
 
     let config = NelderMeadConfig::default();
-    let res = calibrate(&input, &config)?;
+    let res = calibrate(&input, &config).ok()?;
 
     let w_fit = ssvi::total_variance_slice(&slice.k, res.theta, res.eta, res.gamma, res.rho);
     let iv_fit: Vec<f64> = w_fit.iter().map(|&w| (w / t).max(0.0).sqrt()).collect();
@@ -165,8 +165,8 @@ fn fit_slice(slice: &SliceData) -> Option<FitResult> {
         gamma: res.gamma,
         rho: res.rho,
         theta: res.theta,
-        phi: ssvi::phi(res.theta, res.eta, res.gamma),
-        no_arb_usage: res.eta * (1.0 + res.rho.abs()),
+        phi: res.phi(),
+        no_arb_usage: res.no_arb_usage(),
         converged: res.optimizer.converged,
         max_iv_err_bps: max_iv_err * 10000.0,
         rmse_iv_bps: rmse_iv * 10000.0,

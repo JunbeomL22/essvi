@@ -80,7 +80,7 @@ fn run_scenario(s: Scenario) -> Option<FitResult> {
     };
 
     let config = NelderMeadConfig::default();
-    let res = calibrate(&input, &config)?;
+    let res = calibrate(&input, &config).ok()?;
 
     let w_fit = ssvi::total_variance_slice(&k_slice, res.theta, res.eta, res.gamma, res.rho);
 
@@ -96,12 +96,12 @@ fn run_scenario(s: Scenario) -> Option<FitResult> {
     let rmse_iv = (iv_errors.iter().map(|e| e * e).sum::<f64>() / iv_errors.len() as f64).sqrt();
 
     Some(FitResult {
-        phi: ssvi::phi(res.theta, res.eta, res.gamma),
+        phi: res.phi(),
         eta: res.eta,
         gamma: res.gamma,
         rho: res.rho,
         theta: res.theta,
-        no_arb_usage: res.eta * (1.0 + res.rho.abs()),
+        no_arb_usage: res.no_arb_usage(),
         converged: res.optimizer.converged,
         max_iv_err,
         rmse_iv,

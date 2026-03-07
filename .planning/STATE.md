@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** Phase 2 - Error Types and Impl Blocks
+**Current focus:** Phase 3 - Calibration Config
 
 ## Current Position
 
-Phase: 2 of 5 (Error Types and Impl Blocks)
+Phase: 3 of 5 (Calibration Config)
 Plan: 0 of 0 in current phase
 Status: Ready to plan
-Last activity: 2026-03-07 -- Phase 1 (Module Restructuring) completed
+Last activity: 2026-03-07 -- Phase 2 (Error Types and Impl Blocks) completed
 
-Progress: [##........] 20%
+Progress: [####......] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: ~1 min
 - Total execution time: <1 hour
 
@@ -28,9 +28,10 @@ Progress: [##........] 20%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Module Restructuring | 1 | ~1 min | ~1 min |
+| 2. Error Types and Impl Blocks | 1 | ~1 min | ~1 min |
 
 **Recent Trend:**
-- Last 5 plans: Phase 1 Plan 1 (complete)
+- Last 5 plans: Phase 1 Plan 1 (complete), Phase 2 Plan 1 (complete)
 - Trend: on track
 
 *Updated after each plan completion*
@@ -44,6 +45,9 @@ Recent decisions affecting current work:
 
 - [Roadmap]: 5-phase structure derived from 4 requirement categories (CONF, STRC, API, TEST)
 - [Roadmap]: Phase 4 (Binary Dedup) sequenced after Phase 3 to avoid churn from signature changes, even though it only depends on Phase 1
+- [Phase 2]: CalibError enum with 4 variants (NonPositiveTheta, ZeroDerivative, ThetaDivergence, NonConvergence)
+- [Phase 2]: CalibrationResult gains phi() and no_arb_usage() convenience methods
+- [Phase 2]: All public calibration functions return Result<T, CalibError> instead of Option<T>
 
 ### Pending Todos
 
@@ -56,5 +60,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Phase 1 complete, ready to plan Phase 2
+Stopped at: Phase 2 complete, ready to plan Phase 3
 Resume file: None

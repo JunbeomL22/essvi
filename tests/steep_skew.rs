@@ -66,13 +66,13 @@ fn run_calibration(label: &str, t_expiry: f64) {
     let res = calibrate(&input, &config);
 
     match res {
-        Some(r) => {
+        Ok(r) => {
             println!("\n  Calibrated params:");
             println!("    eta   = {:.6}", r.eta);
             println!("    gamma = {:.6}", r.gamma);
             println!("    rho   = {:.6}", r.rho);
             println!("    theta = {:.6e}", r.theta);
-            println!("    phi   = {:.6}", ssvi::phi(r.theta, r.eta, r.gamma));
+            println!("    phi   = {:.6}", r.phi());
             println!("    no-arb: {}", ssvi::no_arbitrage_satisfied(r.eta, r.rho));
             println!("    converged: {}", r.optimizer.converged);
             println!("    iterations: {}", r.optimizer.iterations);
@@ -112,8 +112,8 @@ fn run_calibration(label: &str, t_expiry: f64) {
                     sigma_fit - sigma_mkt, errors[i]);
             }
         }
-        None => {
-            println!("  CALIBRATION FAILED");
+        Err(e) => {
+            println!("  CALIBRATION FAILED: {}", e);
         }
     }
 }
@@ -144,7 +144,7 @@ fn steep_skew_fit_quality() {
         };
 
         let res = calibrate(&input, &NelderMeadConfig::default());
-        assert!(res.is_some(), "calibration failed at T={}", t);
+        assert!(res.is_ok(), "calibration failed at T={}", t);
         let r = res.unwrap();
 
         let w_fit = ssvi::total_variance_slice(&k_slice, r.theta, r.eta, r.gamma, r.rho);

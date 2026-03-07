@@ -141,8 +141,8 @@ fn compute_fit_result(
         gamma: res.gamma,
         rho: res.rho,
         theta: res.theta,
-        phi: ssvi::phi(res.theta, res.eta, res.gamma),
-        no_arb_usage: res.eta * (1.0 + res.rho.abs()),
+        phi: res.phi(),
+        no_arb_usage: res.no_arb_usage(),
         converged: res.optimizer.converged,
         max_iv_err_bps: max_iv_err * 10000.0,
         rmse_iv_bps: rmse_iv * 10000.0,
@@ -257,7 +257,7 @@ fn main() {
         };
 
         match calibrate(&input, &config) {
-            Some(res) => {
+            Ok(res) => {
                 let prev = if unconstrained.is_empty() {
                     None
                 } else {
@@ -276,8 +276,8 @@ fn main() {
                 );
                 unconstrained.push((res, fr));
             }
-            None => {
-                eprintln!("Calibration FAILED for T={}", t);
+            Err(e) => {
+                eprintln!("Calibration FAILED for T={}: {}", t, e);
             }
         }
     }

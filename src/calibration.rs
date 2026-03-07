@@ -2,6 +2,37 @@
 
 use crate::solver::nelder_mead::{nelder_mead_bounded, NelderMeadConfig, NelderMeadResult};
 use crate::model::ssvi;
+use std::fmt;
+
+/// Error type for calibration failures.
+///
+/// Provides distinct variants so callers can distinguish failure modes
+/// and respond appropriately (e.g., retry with different initial guess,
+/// widen bounds, or report specific diagnostics).
+#[derive(Debug, Clone)]
+pub enum CalibError {
+    /// Newton iteration for θ produced a non-positive value.
+    NonPositiveTheta,
+    /// Newton iteration for θ encountered a near-zero derivative (∂w/∂θ ≈ 0).
+    ZeroDerivative,
+    /// Newton iteration for θ did not converge within the iteration limit.
+    ThetaDivergence,
+    /// The Nelder-Mead optimizer did not converge within its iteration budget.
+    NonConvergence,
+}
+
+impl fmt::Display for CalibError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CalibError::NonPositiveTheta => write!(f, "theta went non-positive during Newton iteration"),
+            CalibError::ZeroDerivative => write!(f, "zero derivative encountered during theta solve"),
+            CalibError::ThetaDivergence => write!(f, "theta solve did not converge"),
+            CalibError::NonConvergence => write!(f, "calibration optimizer did not converge"),
+        }
+    }
+}
+
+impl std::error::Error for CalibError {}
 
 /// Solve θ from the ATM consistency equation w(k*, θ) = θ*
 /// using Newton's method with initial guess θ₀ = θ*.
@@ -20,9 +51,9 @@ pub fn solve_theta(
     rho: f64,
     theta_star: f64,
     k_star: f64,
-) -> Option<f64> {
+) -> Result<f64, CalibError> {
     if k_star.abs() < 1e-15 {
-        return Some(theta_star);
+        return Ok(theta_star);
     }
 
     let mut theta = theta_star; // initial guess
@@ -31,7 +62,7 @@ pub fn solve_theta(
 
     for _ in 0..max_iter {
         if theta <= 0.0 {
-            return None;
+            return Err(CalibError::NonPositiveTheta);
         }
 
         let phi = ssvi::phi(theta, eta, gamma);
@@ -41,7 +72,7 @@ pub fn solve_theta(
 
         let residual = w - theta_star;
         if residual.abs() < tol {
-            return Some(theta);
+            return Ok(theta);
         }
 
         // ∂w/∂θ
@@ -50,7 +81,7 @@ pub fn solve_theta(
                 * (rho + (pk + rho) / s);
 
         if dw.abs() < 1e-30 {
-            return None;
+            return Err(CalibError::ZeroDerivative);
         }
 
         theta -= residual / dw;
@@ -63,10 +94,10 @@ pub fn solve_theta(
         let s = ((pk + rho).powi(2) + (1.0 - rho * rho)).sqrt();
         let w = 0.5 * theta * (1.0 + rho * pk + s);
         if (w - theta_star).abs() < tol * 100.0 {
-            return Some(theta);
+            return Ok(theta);
         }
     }
-    None
+    Err(CalibError::ThetaDivergence)
 }
 
 /// Weighted squared error between model and market total variances.
@@ -104,12 +135,30 @@ pub struct CalibrationResult {
     pub optimizer: NelderMeadResult,
 }
 
+impl CalibrationResult {
+    /// Compute the SSVI φ(θ) value from the calibrated parameters.
+    ///
+    /// φ(θ) = η / (θ^γ · (1+θ)^(1-γ))
+    pub fn phi(&self) -> f64 {
+        ssvi::phi(self.theta, self.eta, self.gamma)
+    }
+
+    /// Compute how close the calibrated parameters are to the no-arbitrage boundary.
+    ///
+    /// Returns η·(1 + |ρ|). The no-arbitrage condition requires this to be ≤ 2.
+    /// Values approaching 2.0 indicate the optimizer is constrained by the
+    /// no-arbitrage bound, which may degrade fit quality.
+    pub fn no_arb_usage(&self) -> f64 {
+        self.eta * (1.0 + self.rho.abs())
+    }
+}
+
 /// Calibrate SSVI parameters (η, γ, ρ) to a single slice.
 ///
 /// Uses ρ-grid sweep + 2D Nelder-Mead on (η, γ) to avoid local minima,
 /// as recommended for SSVI calibration. The equality constraint (ATM
 /// consistency) is eliminated by solving θ implicitly inside the objective.
-pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Option<CalibrationResult> {
+pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Result<CalibrationResult, CalibError> {
     let lb_eg = [1e-6, 1e-6];
     let ub_eg = [2.0 - 1e-6, 1.0 - 1e-6];
 
@@ -130,8 +179,8 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Option<
             }
 
             let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
-                Some(t) => t,
-                None => return 1e10,
+                Ok(t) => t,
+                Err(_) => return 1e10,
             };
 
             let w_model = ssvi::total_variance_slice(input.k_slice, theta, eta, gamma, rho);
@@ -156,8 +205,8 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Option<
         }
 
         let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
-            Some(t) => t,
-            None => return 1e10,
+            Ok(t) => t,
+            Err(_) => return 1e10,
         };
 
         let w_model = ssvi::total_variance_slice(input.k_slice, theta, eta, gamma, rho);
@@ -173,7 +222,7 @@ pub fn calibrate(input: &CalibrationInput, config: &NelderMeadConfig) -> Option<
     let rho = res.x[2];
     let theta = solve_theta(eta, gamma, rho, input.theta_star, input.k_star)?;
 
-    Some(CalibrationResult {
+    Ok(CalibrationResult {
         eta,
         gamma,
         rho,
@@ -213,7 +262,7 @@ pub fn calibrate_with_calendar_penalty(
     k_penalty: &[f64],
     lambda: f64,
     init: &[f64; 3], // initial [eta, gamma, rho] from unconstrained fit
-) -> Option<CalibrationResult> {
+) -> Result<CalibrationResult, CalibError> {
     let objective_3d = |x: &[f64]| -> f64 {
         let eta = x[0];
         let gamma = x[1];
@@ -224,8 +273,8 @@ pub fn calibrate_with_calendar_penalty(
         }
 
         let theta = match solve_theta(eta, gamma, rho, input.theta_star, input.k_star) {
-            Some(t) => t,
-            None => return 1e10,
+            Ok(t) => t,
+            Err(_) => return 1e10,
         };
 
         let w_model = ssvi::total_variance_slice(input.k_slice, theta, eta, gamma, rho);
@@ -243,7 +292,7 @@ pub fn calibrate_with_calendar_penalty(
     let rho = res.x[2];
     let theta = solve_theta(eta, gamma, rho, input.theta_star, input.k_star)?;
 
-    Some(CalibrationResult {
+    Ok(CalibrationResult {
         eta,
         gamma,
         rho,
@@ -279,7 +328,7 @@ mod tests {
     #[test]
     fn solve_theta_basic() {
         let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.0);
-        assert!(theta.is_some());
+        assert!(theta.is_ok());
         let t = theta.unwrap();
         // With k*=0, the equation simplifies to θ = θ*
         assert!((t - 0.04).abs() < 1e-10);
@@ -288,7 +337,7 @@ mod tests {
     #[test]
     fn solve_theta_nonzero_kstar() {
         let theta = solve_theta(0.8, 0.4, -0.35, 0.04, 0.01);
-        assert!(theta.is_some());
+        assert!(theta.is_ok());
         let t = theta.unwrap();
         // Verify w(k*, θ) = θ*
         let w = ssvi::total_variance(0.01, t, 0.8, 0.4, -0.35);

@@ -27,11 +27,11 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 
 ### API
 
-- [ ] **API-01**: CalibrationResult has impl block with phi() and no_arb_usage() methods
-- [ ] **API-02**: CalibError enum with variants for theta divergence, non-positive theta, zero derivative, and non-convergence
-- [ ] **API-03**: solve_theta() returns Result<f64, CalibError>
-- [ ] **API-04**: calibrate() returns Result<CalibrationResult, CalibError>
-- [ ] **API-05**: calibrate_with_calendar_penalty() returns Result<CalibrationResult, CalibError>
+- [x] **API-01**: CalibrationResult has impl block with phi() and no_arb_usage() methods
+- [x] **API-02**: CalibError enum with variants for theta divergence, non-positive theta, zero derivative, and non-convergence
+- [x] **API-03**: solve_theta() returns Result<f64, CalibError>
+- [x] **API-04**: calibrate() returns Result<CalibrationResult, CalibError>
+- [x] **API-05**: calibrate_with_calendar_penalty() returns Result<CalibrationResult, CalibError>
 
 ### Testing
 
@@ -77,11 +77,11 @@ Requirements for v1.0 milestone. Each maps to roadmap phases.
 | STRC-04 | Phase 1 | Done |
 | STRC-05 | Phase 4 | Pending |
 | STRC-06 | Phase 4 | Pending |
-| API-01 | Phase 2 | Pending |
-| API-02 | Phase 2 | Pending |
-| API-03 | Phase 2 | Pending |
-| API-04 | Phase 2 | Pending |
-| API-05 | Phase 2 | Pending |
+| API-01 | Phase 2 | Done |
+| API-02 | Phase 2 | Done |
+| API-03 | Phase 2 | Done |
+| API-04 | Phase 2 | Done |
+| API-05 | Phase 2 | Done |
 | TEST-01 | Phase 5 | Pending |
 | TEST-02 | Phase 5 | Pending |
 | TEST-03 | Phase 5 | Pending |
