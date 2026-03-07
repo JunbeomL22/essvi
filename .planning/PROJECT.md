@@ -31,13 +31,23 @@ Accurate, arbitrage-free implied volatility surface calibration that handles rea
 
 ### Active
 
-(None — define next milestone requirements with `/gsd:new-milestone`)
+- [ ] Real option price data for European-style index options (Euro Stoxx 50 / Nikkei 225, fallback SPX)
+- [ ] `data/` directory with organized market data files
+
+## Current Milestone: v1.2 Market Data Collection
+
+**Goal:** Collect and store real European-style index option price data for testing and validation.
+
+**Target features:**
+- `data/` directory for market data storage
+- Real option price data (Euro Stoxx 50 or Nikkei 225 preferred, SPX fallback)
+- At least 1 day of data, manually downloaded from reliable public sources
 
 ### Out of Scope
 
 - eSSVI model implementation — deferred to future milestone
 - Surface-level calibration improvements — future milestone
-- Real market data parsing — future milestone
+- Real market data parsing — deferred (v1.2 is collection only, parsing in future milestone)
 - API ergonomics / crate publishing — future milestone
 - Async/parallel calibration — not needed for current use case
 - Integration with existing calibration pipeline — will be wired in a later milestone when input is option prices instead of IVs
@@ -75,4 +85,4 @@ Module structure: `src/math/{erf,normal,normal_hp,constants}.rs`, `src/pricing/{
 | PricingError with 3 variants | Covers all pricing failure modes (above max, below intrinsic, invalid input) | ✓ Good |
 
 ---
-*Last updated: 2026-03-07 after v1.1 milestone*
+*Last updated: 2026-03-07 after v1.2 milestone start*

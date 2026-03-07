@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Pricing Primitives
-status: completed
+milestone: v1.2
+milestone_name: Market Data Collection
+status: active
 stopped_at: null
 last_updated: "2026-03-07"
-last_activity: 2026-03-07 -- v1.1 milestone archived
+last_activity: 2026-03-07 -- Milestone v1.2 started
 progress:
-  percent: 100
+  percent: 0
 ---
 
 # Project State
@@ -17,16 +17,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Accurate, arbitrage-free implied volatility surface calibration
-**Current focus:** Planning next milestone
+**Current focus:** v1.2 Market Data Collection
 
 ## Current Position
 
-Phase: 8 of 8 (all phases complete)
-Plan: All complete
-Status: Milestone archived — ready for next milestone
-Last activity: 2026-03-07 -- v1.1 Pricing Primitives archived
-
-Progress: [##########] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-07 — Milestone v1.2 started
 
 ## Performance Metrics
 
@@ -65,5 +63,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: v1.1 milestone archived
+Stopped at: Defining v1.2 requirements
 Resume file: None
