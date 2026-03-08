@@ -49,9 +49,24 @@ pub struct DirectCalibConfig {
     pub eta_starts: Vec<f64>,
 
     // ── Calendar spread penalty ──────────────────────────────
-    /// Penalty weight for calendar spread (theta monotonicity) violations.
-    /// Used by `calibrate_slice_with_prev` to penalize theta < prev_theta.
+    /// Penalty weight for theta monotonicity violations.
     pub lambda_calendar: f64,
+    /// Penalty weight for w(k) calendar spread violations across the k-grid.
+    pub lambda_calendar_spread: f64,
+    /// Lower bound of the k-grid for calendar spread penalty.
+    pub calendar_k_lo: f64,
+    /// Upper bound of the k-grid for calendar spread penalty.
+    pub calendar_k_hi: f64,
+    /// Step size of the k-grid for calendar spread penalty.
+    pub calendar_k_step: f64,
+
+    // ── ATM weighting ──────────────────────────────────────────
+    /// Lower bound of the ATM weighting zone.
+    pub atm_weight_lo: f64,
+    /// Upper bound of the ATM weighting zone.
+    pub atm_weight_hi: f64,
+    /// Weight multiplier for k in the ATM zone (outside zone = 1.0).
+    pub atm_weight_mult: f64,
 }
 
 impl Default for DirectCalibConfig {
@@ -76,6 +91,14 @@ impl Default for DirectCalibConfig {
             eta_starts: vec![0.3, 0.8, 1.3],
 
             lambda_calendar: 10.0,
+            lambda_calendar_spread: 100.0,
+            calendar_k_lo: -0.8,
+            calendar_k_hi: 0.4,
+            calendar_k_step: 0.02,
+
+            atm_weight_lo: -0.15,
+            atm_weight_hi: 0.15,
+            atm_weight_mult: 3.0,
         }
     }
 }
@@ -177,6 +200,15 @@ pub fn validate_butterfly(
 
 // ── Calibration ─────────────────────────────────────────────
 
+/// Previous slice parameters for calendar spread penalty.
+#[derive(Debug, Clone, Copy)]
+pub struct PrevSliceParams {
+    pub theta: f64,
+    pub eta: f64,
+    pub gamma: f64,
+    pub rho: f64,
+}
+
 /// Calibrate SSVI parameters to a single volatility slice via 4D Nelder-Mead.
 ///
 /// Directly optimizes all four parameters (θ, η, γ, ρ) without implicit θ solve.
@@ -200,8 +232,9 @@ pub fn calibrate_slice(
 /// Calibrate multiple volatility slices sequentially with calendar spread penalty.
 ///
 /// Slices are sorted by expiry T (shortest to longest) and calibrated in order.
-/// Each slice after the first includes a penalty for θ < prev_θ to enforce
-/// monotonically non-decreasing ATM total variance across expiries.
+/// Each slice after the first includes:
+///   - theta monotonicity penalty (lambda_calendar)
+///   - w(k) calendar spread penalty across k-grid (lambda_calendar_spread)
 ///
 /// Results are returned in T-sorted order (ascending).
 pub fn calibrate_surface(
@@ -222,12 +255,17 @@ pub fn calibrate_surface(
     });
 
     let mut results = Vec::with_capacity(slices.len());
-    let mut prev_theta: Option<f64> = None;
+    let mut prev_params: Option<PrevSliceParams> = None;
 
     for &idx in &indices {
         let slice = &slices[idx];
-        let result = calibrate_slice_with_prev(slice.k, slice.w, config, prev_theta);
-        prev_theta = Some(result.theta);
+        let result = calibrate_slice_with_prev(slice.k, slice.w, config, prev_params);
+        prev_params = Some(PrevSliceParams {
+            theta: result.theta,
+            eta: result.eta,
+            gamma: result.gamma,
+            rho: result.rho,
+        });
         results.push(result);
     }
 
@@ -236,16 +274,28 @@ pub fn calibrate_surface(
 
 /// Core calibration logic for a single slice, with optional calendar spread penalty.
 ///
-/// When `prev_theta` is `Some(prev)`, the objective includes:
-///   lambda_calendar · max(0, prev - θ)²
-/// to penalize θ values below the previous slice's fitted θ.
+/// When `prev` is `Some(...)`, the objective includes:
+///   - lambda_calendar · max(0, prev_theta - θ)²  (theta monotonicity)
+///   - lambda_calendar_spread · Σ max(0, w_prev(k) - w_cur(k))²  (k-grid spread)
 pub fn calibrate_slice_with_prev(
     k_slice: &[f64],
     w_market: &[f64],
     config: &DirectCalibConfig,
-    prev_theta: Option<f64>,
+    prev: Option<PrevSliceParams>,
 ) -> DirectCalibResult {
     let lambda_cal = config.lambda_calendar;
+    let lambda_spread = config.lambda_calendar_spread;
+
+    // Build calendar k-grid
+    let cal_k_grid: Vec<f64> = {
+        let mut v = Vec::new();
+        let mut k = config.calendar_k_lo;
+        while k <= config.calendar_k_hi + 1e-9 {
+            v.push(k);
+            k += config.calendar_k_step;
+        }
+        v
+    };
 
     // 4D objective: x = [theta, eta, gamma, rho]
     let objective = |x: &[f64]| -> f64 {
@@ -259,20 +309,39 @@ pub fn calibrate_slice_with_prev(
             return 1e10;
         }
 
-        // SSE on total variance (pure — no butterfly penalty)
+        // Weighted SSE on total variance
         let w_model = ssvi::total_variance_slice(k_slice, theta, eta, gamma, rho);
         let sse: f64 = w_model
             .iter()
             .zip(w_market.iter())
-            .map(|(m, mkt)| (m - mkt).powi(2))
+            .enumerate()
+            .map(|(i, (m, mkt))| {
+                let wt = if k_slice[i] >= config.atm_weight_lo
+                    && k_slice[i] <= config.atm_weight_hi
+                {
+                    config.atm_weight_mult
+                } else {
+                    1.0
+                };
+                wt * (m - mkt).powi(2)
+            })
             .sum();
 
         let mut total = sse;
 
-        // Calendar spread penalty: penalize theta below previous slice's theta
-        if let Some(prev) = prev_theta {
-            let shortfall = (prev - theta).max(0.0);
+        // Calendar penalties
+        if let Some(prev) = prev {
+            // Theta monotonicity
+            let shortfall = (prev.theta - theta).max(0.0);
             total += lambda_cal * shortfall * shortfall;
+
+            // w(k) calendar spread across k-grid
+            for &k in &cal_k_grid {
+                let w_prev = ssvi::total_variance(k, prev.theta, prev.eta, prev.gamma, prev.rho);
+                let w_cur = ssvi::total_variance(k, theta, eta, gamma, rho);
+                let gap = (w_prev - w_cur).max(0.0);
+                total += lambda_spread * gap * gap;
+            }
         }
 
         total
@@ -293,6 +362,7 @@ pub fn calibrate_slice_with_prev(
     ];
 
     // Initial theta estimate from median of w_market, biased by prev_theta if available
+    let prev_theta = prev.map(|p| p.theta);
     let mut w_sorted: Vec<f64> = w_market.to_vec();
     w_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let median_w = if w_sorted.is_empty() {

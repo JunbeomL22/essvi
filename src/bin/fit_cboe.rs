@@ -122,14 +122,14 @@ fn fit_surface(slices: &[SliceData]) -> Vec<FitResult> {
     let config = CalibrationConfig::default();
     let k_penalty: Vec<f64> = {
         let mut v = Vec::new();
-        let mut k = -1.5_f64;
-        while k <= 0.5 + 1e-9 {
+        let mut k = -0.8_f64;
+        while k <= 0.2 + 1e-9 {
             v.push(k);
-            k += 0.025;
+            k += 0.02;
         }
         v
     };
-    let lambda = 500.0;
+    let lambda = 50.0;
 
     // Step 1: unconstrained fit for initial guesses
     println!("=== Step 1: Unconstrained per-slice fit ===");
@@ -154,7 +154,7 @@ fn fit_surface(slices: &[SliceData]) -> Vec<FitResult> {
 
         let weights: Vec<f64> = slice.k
             .iter()
-            .map(|&k| if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 })
+            .map(|&k| if k >= -0.15 && k <= 0.15 { 3.0 } else { 1.0 })
             .collect();
 
         let input = CalibrationInput {
@@ -195,7 +195,7 @@ fn fit_surface(slices: &[SliceData]) -> Vec<FitResult> {
 
     // Step 2: surface fit with calendar penalty
     println!(
-        "\n=== Step 2: Surface fit (lambda={}, k_penalty: -1.5..0.5 step 0.025) ===",
+        "\n=== Step 2: Surface fit (lambda={}, k_penalty: -0.8..0.2 step 0.02) ===",
         lambda
     );
     let mut results: Vec<FitResult> = Vec::new();
@@ -219,7 +219,7 @@ fn fit_surface(slices: &[SliceData]) -> Vec<FitResult> {
 
         let weights: Vec<f64> = slice.k
             .iter()
-            .map(|&k| if k >= -0.2 && k <= 0.2 { 3.0 } else { 1.0 })
+            .map(|&k| if k >= -0.15 && k <= 0.15 { 3.0 } else { 1.0 })
             .collect();
 
         let input = CalibrationInput {
@@ -356,8 +356,8 @@ fn report(results: &[FitResult], ticker: &str, date: &str) {
         date
     ));
     md.push_str("Surface calibration with calendar arbitrage penalty.\n\n");
-    md.push_str("- k penalty range: -1.5 to 0.5, step 0.025\n");
-    md.push_str("- lambda: 500\n");
+    md.push_str("- k penalty range: -0.8 to 0.2, step 0.02\n");
+    md.push_str("- lambda: 50\n");
     md.push_str("- IV rule: p_iv (k < -0.1), mean(p_iv,c_iv) (-0.1..0.1), c_iv (k > 0.1)\n\n");
 
     // Summary table
